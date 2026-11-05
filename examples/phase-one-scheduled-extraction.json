@@ -1,0 +1,113 @@
+{
+  "name": "BDP scheduled point history (placeholder)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "bdp-schedule",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "building",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 100
+      },
+      "id": "bdp-buildings",
+      "name": "Discover Buildings",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "bdpApi": {
+          "name": "Bind your BDP credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "measurementValue",
+        "operation": "getAll",
+        "buildingId": {
+          "mode": "id",
+          "value": "={{$json.id}}"
+        },
+        "returnAll": false,
+        "limit": 100
+      },
+      "id": "bdp-measurements",
+      "name": "Discover Measurement Points",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "bdpApi": {
+          "name": "Bind your BDP credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "measurementValue",
+        "operation": "getHistorical",
+        "measurementId": {
+          "mode": "id",
+          "value": "={{$json.id}}"
+        },
+        "start": "={{$now.minus({days: 1}).toISO()}}",
+        "end": "={{$now.toISO()}}",
+        "returnAll": false,
+        "limit": 100
+      },
+      "id": "bdp-point-history",
+      "name": "Read Point History",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": {
+        "bdpApi": {
+          "name": "Bind your BDP credential"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "bdp-downstream",
+      "name": "Use Native Records",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [[{ "node": "Discover Buildings", "type": "main", "index": 0 }]]
+    },
+    "Discover Buildings": {
+      "main": [[{ "node": "Discover Measurement Points", "type": "main", "index": 0 }]]
+    },
+    "Discover Measurement Points": {
+      "main": [[{ "node": "Read Point History", "type": "main", "index": 0 }]]
+    },
+    "Read Point History": {
+      "main": [[{ "node": "Use Native Records", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-4000-8000-000000000001"
+}

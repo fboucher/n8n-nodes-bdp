@@ -1,19 +1,26 @@
 {
-	"name": "n8n-nodes-<...>",
+	"name": "n8n-nodes-bdp",
 	"version": "0.1.0",
-	"description": "",
+	"description": "Read-only EcoStruxure Building Data Platform nodes for n8n",
 	"license": "MIT",
-	"homepage": "",
+	"homepage": "https://github.com/fboucher/n8n-nodes-bdp#readme",
 	"keywords": [
-		"n8n-community-node-package"
+		"n8n-community-node-package",
+		"n8n",
+		"schneider-electric",
+		"building-data-platform",
+		"bdp"
 	],
 	"author": {
-		"name": "",
-		"email": ""
+		"name": "BDP Community Node Maintainers",
+		"email": "noreply@github.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/<...>/n8n-nodes-<...>.git"
+		"url": "https://github.com/fboucher/n8n-nodes-bdp.git"
+	},
+	"bugs": {
+		"url": "https://github.com/fboucher/n8n-nodes-bdp/issues"
 	},
 	"scripts": {
 		"build": "n8n-node build",
@@ -21,26 +28,26 @@
 		"dev": "n8n-node dev",
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
+		"test": "npm run build && node --test tests/*.test.cjs",
 		"release": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"examples"
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"strict": true,
 		"credentials": [
-			"dist/credentials/GithubIssuesApi.credentials.js",
-			"dist/credentials/GithubIssuesOAuth2Api.credentials.js"
+			"dist/credentials/BdpOAuth2Api.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/GithubIssues/GithubIssues.node.js",
-			"dist/nodes/Example/Example.node.js"
+			"dist/nodes/Bdp/Bdp.node.js"
 		]
 	},
 	"devDependencies": {
-		"@n8n/node-cli": "*",
+		"@n8n/node-cli": "^0.55.5",
 		"eslint": "9.39.4",
 		"prettier": "3.8.3",
 		"release-it": "20.2.0",
