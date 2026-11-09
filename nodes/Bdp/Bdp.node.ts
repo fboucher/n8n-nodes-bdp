@@ -10,7 +10,7 @@ import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { getBuildings } from './listSearch/getBuildings';
 import { getMeasurementValues } from './listSearch/getMeasurementValues';
 import { normalizeWindow } from './shared/time';
-import { fetchAllPages, getBdpRequest } from './shared/transport';
+import { fetchAllPages, getBdpRequest, requestBdpGraphql } from './shared/transport';
 
 const buildingResource: INodeProperties = {
 	displayName: 'Building',
@@ -158,6 +158,7 @@ const properties: INodeProperties[] = [
 		noDataExpression: true,
 		options: [
 			{ name: 'Building', value: 'building' },
+			{ name: 'GraphQL', value: 'graphql' },
 			{ name: 'Measurement Point', value: 'measurementValue' },
 		],
 		default: 'building',
@@ -192,6 +193,45 @@ const properties: INodeProperties[] = [
 			},
 		],
 		default: 'getAll',
+	},
+	{
+		displayName: 'Operation',
+		name: 'operation',
+		type: 'options',
+		noDataExpression: true,
+		displayOptions: { show: { resource: ['graphql'] } },
+		options: [
+			{ name: 'Execute Query', value: 'executeQuery', action: 'Execute a read only query' },
+		],
+		default: 'executeQuery',
+	},
+	{
+		displayName: 'Query',
+		name: 'query',
+		type: 'string',
+		typeOptions: { rows: 10 },
+		required: true,
+		default: '',
+		displayOptions: { show: { resource: ['graphql'], operation: ['executeQuery'] } },
+		description:
+			'Read-only GraphQL document. Every operation must be a query; pagination is controlled by your document.',
+	},
+	{
+		displayName: 'Variables',
+		name: 'variables',
+		type: 'json',
+		default: '{}',
+		displayOptions: { show: { resource: ['graphql'], operation: ['executeQuery'] } },
+		description:
+			'JSON object of variables, or an expression returning an object. Native JSON value types are preserved.',
+	},
+	{
+		displayName: 'Operation Name',
+		name: 'operationName',
+		type: 'string',
+		default: '',
+		displayOptions: { show: { resource: ['graphql'], operation: ['executeQuery'] } },
+		description: 'Named query to execute. Required when the document contains multiple queries.',
 	},
 	buildingResource,
 	measurementBuildingResource,
@@ -262,6 +302,16 @@ async function executeOperation(
 ): Promise<IDataObject[]> {
 	const resource = context.getNodeParameter('resource', itemIndex) as string;
 	const operation = context.getNodeParameter('operation', itemIndex) as string;
+	if (resource === 'graphql' && operation === 'executeQuery') {
+		return [
+			await requestBdpGraphql.call(
+				context,
+				context.getNodeParameter('query', itemIndex),
+				context.getNodeParameter('variables', itemIndex, '{}'),
+				context.getNodeParameter('operationName', itemIndex, ''),
+			),
+		];
+	}
 	const isBuildingList = resource === 'building' && operation === 'getAll';
 	const returnAll = isBuildingList
 		? (context.getNodeParameter('returnAllBuildings', itemIndex, true) as boolean)

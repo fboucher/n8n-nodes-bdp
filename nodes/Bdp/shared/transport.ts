@@ -5,6 +5,7 @@ import type {
 	IHttpRequestOptions,
 } from 'n8n-workflow';
 import { NodeOperationError, sleep } from 'n8n-workflow';
+import { credentialSecrets, parseGraphqlResponse, prepareGraphqlRequest } from './graphql';
 
 export const PAGE_SIZE = 5000;
 const MAX_RETRIES = 3;
@@ -112,10 +113,46 @@ export async function requestBdp(
 		returnFullResponse: true,
 	};
 
+	return authenticatedRequest(this, options);
+}
+
+export async function requestBdpGraphql(
+	this: BdpContext,
+	query: unknown,
+	variables: unknown,
+	operationName: unknown = '',
+): Promise<IDataObject> {
+	// Validation is inside the only POST entry point, before credentials or network access.
+	const body = prepareGraphqlRequest(query, variables, operationName);
+	const credentials = await this.getCredentials('bdpOAuth2Api');
+	const response = await authenticatedRequest(this, {
+		method: 'POST',
+		url: `${getApiBaseUrl(credentials.environment)}/graphql`,
+		body,
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		json: true,
+		timeout: 60_000,
+		returnFullResponse: true,
+	}, credentials);
+	const contentType = headerValue(response.headers, 'content-type')?.split(';')[0].trim().toLowerCase();
+	if (contentType && !['application/json', 'application/graphql-response+json'].includes(contentType)) {
+		throw new NodeOperationError(this.getNode(), 'BDP returned an unsupported GraphQL content type; only JSON envelopes are supported.');
+	}
+	return parseGraphqlResponse(response.data, [
+		...credentialSecrets(credentials),
+		...credentialSecrets(await this.getCredentials('bdpOAuth2Api')),
+	]);
+}
+
+async function authenticatedRequest(
+	context: BdpContext,
+	options: IHttpRequestOptions,
+	graphqlCredentials?: IDataObject,
+): Promise<BdpPage> {
 	for (let attempt = 0; ; attempt++) {
 		try {
-			const response = await this.helpers.httpRequestWithAuthentication.call(
-				this,
+			const response = await context.helpers.httpRequestWithAuthentication.call(
+				context,
 				'bdpOAuth2Api',
 				options,
 			);
@@ -124,6 +161,21 @@ export async function requestBdp(
 				headers: response.headers ?? {},
 			};
 		} catch (error) {
+			if (graphqlCredentials && error instanceof SyntaxError) {
+				throw new NodeOperationError(context.getNode(), 'BDP returned an invalid JSON GraphQL response.');
+			}
+			if (graphqlCredentials && typeof error === 'object' && error !== null) {
+				const response = (error as { response?: { body?: unknown; data?: unknown } }).response;
+				const body = response?.body ?? response?.data;
+				if (typeof body === 'object' && body !== null && 'errors' in body &&
+					Array.isArray(body.errors) && body.errors.length > 0) {
+					// Application errors are permanent, even when accompanied by a transient HTTP status.
+					parseGraphqlResponse(body, [
+						...credentialSecrets(graphqlCredentials),
+						...credentialSecrets(await context.getCredentials('bdpOAuth2Api')),
+					]);
+				}
+			}
 			const status = errorStatus(error);
 			const headers = errorHeaders(error);
 			const retryDelay = retryAfterMs(headers);
@@ -131,10 +183,10 @@ export async function requestBdp(
 				isTransientStatus(status) || (status === undefined && isTransientNetworkError(error));
 
 			if (!retryable || attempt >= MAX_RETRIES) {
-				throw new NodeOperationError(this.getNode(), safeFailureMessage(status));
+				throw new NodeOperationError(context.getNode(), safeFailureMessage(status));
 			}
 			if (headerValue(headers, 'retry-after') && retryDelay === undefined) {
-				throw new NodeOperationError(this.getNode(), safeFailureMessage(status));
+				throw new NodeOperationError(context.getNode(), safeFailureMessage(status));
 			}
 
 			const backoff = Math.min(250 * 2 ** attempt, 2000);
