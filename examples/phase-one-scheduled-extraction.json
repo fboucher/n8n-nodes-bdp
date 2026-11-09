@@ -22,8 +22,7 @@
       "parameters": {
         "resource": "building",
         "operation": "getAll",
-        "returnAll": false,
-        "limit": 100
+        "returnAllBuildings": true
       },
       "id": "bdp-buildings",
       "name": "Discover Buildings",

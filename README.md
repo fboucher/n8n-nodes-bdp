@@ -28,7 +28,7 @@ npm test
 npm run lint
 ```
 
-`npm test` builds the node and runs the transport and timestamp tests. No BDP credentials or live API access are needed for these checks.
+`npm test` builds the node and runs the credential, operation, transport, and timestamp tests. No BDP credentials or live API access are needed for these checks.
 
 ## Credentials
 
@@ -42,12 +42,13 @@ After updating this package, restart n8n to reload the compiled credential defin
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |
-| Building | List | Lists native building records; optional server-side name filter. |
+| Building | List | Lists all accessible native building records by default, following pagination; optional server-side name filter and optional Limit. |
+| Building | Get | Retrieves the full native record for one selected or manually entered building ID. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 | Building | Historical Values | Reads building-wide history directly without enumerating points. |
 
-List operations and historical operations default to a 100-record Limit. **Return All** paginates through the full result set. Each API page requests no more than 5,000 records. Results preserve the API's native fields and value types and are returned as individually linked n8n items; empty results produce zero items.
+Building List defaults to **Return All**, so it follows pagination to list all accessible buildings. Turn Return All off to apply its optional Limit (default 100). Other list and historical operations retain their 100-record Limit default with an explicit **Return All** option. Each API page requests no more than 5,000 records. Results preserve the API's native fields and value types and are returned as individually linked n8n items; empty results produce zero items.
 
 Historical Start and End fields require ISO 8601 timestamps with seconds and an explicit `Z` or UTC offset, for example `2025-01-01T00:00:00Z` or `2025-01-01T01:00:00+01:00`. The node normalizes valid offsets to UTC and rejects ambiguous local timestamps and windows where Start is not earlier than End. BDP determines whether the time boundaries are inclusive.
 
@@ -61,10 +62,11 @@ The workflow below illustrates the minimal building-list shape. Bind your own BD
 {
   "resource": "building",
   "operation": "getAll",
-  "returnAll": false,
-  "limit": 100
+  "returnAllBuildings": true
 }
 ```
+
+Use the Building **Get** operation when you need the full details for one building ID; **List** calls the collection endpoint and returns each accessible building separately.
 
 Importable sanitized workflow examples for scheduled point history and direct building history are in [`examples/`](examples/).
 

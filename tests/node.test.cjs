@@ -48,18 +48,95 @@ function errorWithStatus(statusCode, headers = {}) {
 	return error;
 }
 
-test('lists buildings as individually linked native records with server-side name filtering', async () => {
-	const buildings = [{ id: 'b-1', name: 'North', metadata: null, count: 4 }];
+test('Building List returns all pages by default and preserves server-side filtering and item links', async () => {
+	const buildings = [
+		{ id: 'b-1', name: 'North', metadata: null, count: 4 },
+		{ id: 'b-2', name: 'North Annex', metadata: null, count: 2 },
+		{ id: 'b-3', name: 'North Tower', metadata: null, count: 1 },
+	];
 	const { context, calls } = createContext(
-		[{ resource: 'building', operation: 'getAll', name: 'North', limit: 100 }],
-		[{ body: buildings, headers: {} }],
+		[{ resource: 'building', operation: 'getAll', name: 'North' }],
+		[
+			{ body: buildings.slice(0, 2), headers: { 'x-total-count': '3' } },
+			{ body: buildings.slice(2), headers: { 'x-total-count': '3' } },
+		],
 		[{ json: {} }],
 	);
 	const [output] = await new Bdp().execute.call(context);
-	assert.deepEqual(output, [{ json: buildings[0], pairedItem: { item: 0 } }]);
-	assert.equal(calls[0].url.endsWith('/api/Buildings'), true);
-	assert.equal(calls[0].qs.name, 'North');
-	assert.equal(calls[0].qs.take, 100);
+	assert.deepEqual(output, buildings.map((json) => ({ json, pairedItem: { item: 0 } })));
+	assert.ok(calls.every((call) => call.url.endsWith('/api/Buildings')));
+	assert.deepEqual(calls.map(({ qs }) => qs), [
+		{ name: 'North', take: 5000, skip: 0 },
+		{ name: 'North', take: 5000, skip: 2 },
+	]);
+});
+
+test('Building List can be explicitly limited instead of returning all', async () => {
+	const { context, calls } = createContext(
+		[
+			{
+				resource: 'building',
+				operation: 'getAll',
+				returnAllBuildings: false,
+				buildingLimit: 2,
+			},
+		],
+		[{ body: [{ id: 'b-1' }, { id: 'b-2' }], headers: { 'x-total-count': '3' } }],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output.map(({ json }) => json.id), ['b-1', 'b-2']);
+	assert.equal(calls[0].qs.take, 2);
+});
+
+test('Building Get requires an ID and calls the dedicated detail endpoint', async () => {
+	const building = { id: 'b-1', name: 'North', siteId: 'site-1', floorCount: 2 };
+	const { context, calls } = createContext(
+		[
+			{
+				resource: 'building',
+				operation: 'getById',
+				buildingId: { mode: 'id', value: 'building/1' },
+			},
+		],
+		[{ body: building, headers: {} }],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output, [{ json: building, pairedItem: { item: 0 } }]);
+	assert.equal(calls.length, 1);
+	assert.ok(calls[0].url.endsWith('/api/Buildings/building%2F1'));
+	assert.deepEqual(calls[0].qs, {});
+});
+
+test('Building Get fails clearly without an ID and does not request the collection endpoint', async () => {
+	const { context, calls } = createContext(
+		[{ resource: 'building', operation: 'getById' }],
+		[],
+	);
+	await assert.rejects(new Bdp().execute.call(context), /Building ID is required/);
+	assert.equal(calls.length, 0);
+});
+
+test('Building operations are presented as distinct List, Get, and Historical Values', () => {
+	const operations = new Bdp().description.properties.find(
+		({ name, displayOptions }) =>
+			name === 'operation' && displayOptions?.show?.resource?.includes('building'),
+	);
+	assert.deepEqual(
+		operations.options.map(({ name, value }) => ({ name, value })),
+		[
+			{ name: 'List', value: 'getAll' },
+			{ name: 'Get', value: 'getById' },
+			{ name: 'Historical Values', value: 'getHistorical' },
+		],
+	);
+	const buildingId = new Bdp().description.properties.find(
+		({ name }) => name === 'buildingId',
+	);
+	assert.deepEqual(buildingId.displayOptions.show.operation, ['getById', 'getHistorical']);
+	assert.equal(
+		new Bdp().description.properties.find(({ name }) => name === 'returnAllBuildings').default,
+		true,
+	);
 });
 
 test('lists measurement points using a scoped building route and all server filters', async () => {

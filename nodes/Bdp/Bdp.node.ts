@@ -20,7 +20,7 @@ const buildingResource: INodeProperties = {
 	required: true,
 	displayOptions: {
 		show: {
-			operation: ['getAll', 'getHistorical'],
+			operation: ['getById', 'getHistorical'],
 			resource: ['building'],
 		},
 	},
@@ -84,12 +84,45 @@ const measurementResource: INodeProperties = {
 const paginationProperties: INodeProperties[] = [
 	{
 		displayName: 'Return All',
+		name: 'returnAllBuildings',
+		type: 'boolean',
+		default: true,
+		displayOptions: {
+			show: {
+				resource: ['building'],
+				operation: ['getAll'],
+			},
+		},
+		description: 'Whether to return every accessible building across all pages',
+	},
+	{
+		displayName: 'Limit',
+		name: 'buildingLimit',
+		type: 'number',
+		typeOptions: { minValue: 1 },
+		default: 100,
+		displayOptions: {
+			show: {
+				resource: ['building'],
+				operation: ['getAll'],
+				returnAllBuildings: [false],
+			},
+		},
+		description: 'Max number of buildings to return when Return All is disabled',
+	},
+	{
+		displayName: 'Return All',
 		name: 'returnAll',
 		type: 'boolean',
 		default: false,
 		displayOptions: {
 			show: {
+				resource: ['measurementValue', 'building'],
 				operation: ['getAll', 'getHistorical'],
+			},
+			hide: {
+				resource: ['building'],
+				operation: ['getAll'],
 			},
 		},
 		description: 'Whether to return all results or only up to a given limit',
@@ -104,8 +137,13 @@ const paginationProperties: INodeProperties[] = [
 		default: 100,
 		displayOptions: {
 			show: {
+				resource: ['measurementValue', 'building'],
 				operation: ['getAll', 'getHistorical'],
 				returnAll: [false],
+			},
+			hide: {
+				resource: ['building'],
+				operation: ['getAll'],
 			},
 		},
 		description: 'Max number of results to return',
@@ -131,7 +169,10 @@ const properties: INodeProperties[] = [
 		noDataExpression: true,
 		displayOptions: { show: { resource: ['building'] } },
 		options: [
-			{ name: 'Get Many', value: 'getAll', action: 'List buildings' },
+			// Keep the familiar List label while retaining the getAll operation ID.
+			// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
+			{ name: 'List', value: 'getAll', action: 'List buildings' },
+			{ name: 'Get', value: 'getById', action: 'Get a building' },
 			{ name: 'Historical Values', value: 'getHistorical', action: 'Get building history' },
 		],
 		default: 'getAll',
@@ -221,8 +262,13 @@ async function executeOperation(
 ): Promise<IDataObject[]> {
 	const resource = context.getNodeParameter('resource', itemIndex) as string;
 	const operation = context.getNodeParameter('operation', itemIndex) as string;
-	const returnAll = context.getNodeParameter('returnAll', itemIndex, false) as boolean;
-	const limit = context.getNodeParameter('limit', itemIndex, 100) as number;
+	const isBuildingList = resource === 'building' && operation === 'getAll';
+	const returnAll = isBuildingList
+		? (context.getNodeParameter('returnAllBuildings', itemIndex, true) as boolean)
+		: (context.getNodeParameter('returnAll', itemIndex, false) as boolean);
+	const limit = isBuildingList
+		? (context.getNodeParameter('buildingLimit', itemIndex, 100) as number)
+		: (context.getNodeParameter('limit', itemIndex, 100) as number);
 	if (!returnAll && (!Number.isSafeInteger(limit) || limit < 1)) {
 		throw new NodeOperationError(context.getNode(), 'Limit must be a positive whole number.');
 	}
@@ -233,6 +279,14 @@ async function executeOperation(
 		path = '/api/Buildings';
 		const name = context.getNodeParameter('name', itemIndex, '') as string;
 		if (name) filters.name = name;
+	} else if (operation === 'getById' && resource === 'building') {
+		const buildingId = context.getNodeParameter('buildingId', itemIndex, '', {
+			extractValue: true,
+		}) as string;
+		if (!buildingId.trim()) {
+			throw new NodeOperationError(context.getNode(), 'Building ID is required.');
+		}
+		path = `/api/Buildings/${encodeURIComponent(buildingId)}`;
 	} else if (operation === 'getAll' && resource === 'measurementValue') {
 		const buildingId = context.getNodeParameter('buildingId', itemIndex, '', {
 			extractValue: true,
@@ -269,6 +323,18 @@ async function executeOperation(
 		const start = context.getNodeParameter('start', itemIndex) as string;
 		const end = context.getNodeParameter('end', itemIndex) as string;
 		Object.assign(filters, normalizeWindow(start, end), { orderBy: 'TimestampAscending' });
+	}
+
+	if (operation === 'getById') {
+		const response = await getBdpRequest(context)(path, {});
+		if (
+			typeof response.data !== 'object' ||
+			response.data === null ||
+			Array.isArray(response.data)
+		) {
+			throw new NodeOperationError(context.getNode(), 'BDP returned an invalid building detail response.');
+		}
+		return [response.data as IDataObject];
 	}
 
 	return fetchAllPages(getBdpRequest(context), path, filters, { returnAll, limit });
