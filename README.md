@@ -36,6 +36,8 @@ Create one **BDP Community OAuth2 API** credential and enter the tenant ID, clie
 
 The credential test sends a read-only request to list at most one building. An empty successful response is a valid credential with no accessible buildings; authentication failures and access-denied responses are surfaced separately. The API contract declares bearer authentication and does not require the optional subscription-key scheme. Confirm environment-specific access with your BDP administrator.
 
+After updating this package, restart n8n to reload the compiled credential definition. Existing credentials do not need to be recreated or resaved for the token-URL expression fix: n8n applies the current hidden default when resolving credentials. If using a read-only `dist` mount with `N8N_CUSTOM_EXTENSIONS`, run `npm run build` in the mounted source checkout, then restart the n8n service when it is safe to interrupt executions. Rebuilding alone does not reload definitions already loaded by the running process.
+
 ## Operations
 
 | Resource | Operation | Behavior |

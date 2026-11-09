@@ -42,7 +42,7 @@ export class BdpOAuth2Api implements ICredentialType {
 			name: 'accessTokenUrl',
 			type: 'hidden',
 			default:
-				"={{ 'https://login.microsoftonline.com/' + $credentials.tenantId + '/oauth2/v2.0/token' }}",
+				"={{ 'https://login.microsoftonline.com/' + $self.tenantId + '/oauth2/v2.0/token' }}",
 			required: true,
 		},
 		{
