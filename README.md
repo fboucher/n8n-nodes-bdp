@@ -10,6 +10,10 @@ This package targets **self-hosted n8n**. The declared GraphQL parser runtime de
 
 Install `n8n-nodes-bdp` from **Settings → Community nodes** in a self-hosted n8n instance, or follow [n8n's community-node installation guide](https://docs.n8n.io/integrations/community-nodes/installation/). The npm package name is a proposed identity; maintainers must approve the package owner and publishing configuration before the first release.
 
+## Run locally with Docker Compose
+
+The included [`compose.yml`](compose.yml) runs a standalone n8n instance with this checkout's BDP node loaded. See the [local Docker Compose guide](docs/docker-compose.md) for setup, workflow examples, daily use, and troubleshooting. This is a local testing setup, not a production deployment.
+
 ## Requirements and development
 
 - Node.js 22 or later, matching the current n8n community-node runtime requirement.
@@ -39,7 +43,9 @@ Create one **BDP Community OAuth2 API** credential and enter the tenant ID, clie
 
 The credential test sends a read-only request to list at most one building. An empty successful response is a valid credential with no accessible buildings; authentication failures and access-denied responses are surfaced separately. The API contract declares bearer authentication and does not require the optional subscription-key scheme. Confirm environment-specific access with your BDP administrator.
 
-After updating this package, restart n8n to reload the compiled credential definition. Existing credentials do not need to be recreated or resaved for the token-URL expression fix: n8n applies the current hidden default when resolving credentials. If using a read-only `dist` mount with `N8N_CUSTOM_EXTENSIONS`, run `npm run build` in the mounted source checkout, then restart the n8n service when it is safe to interrupt executions. Rebuilding alone does not reload definitions already loaded by the running process.
+After updating this package, restart n8n to reload the compiled credential definition. Existing credentials do not need to be recreated or resaved for the token-URL expression fix: n8n applies the current hidden default when resolving credentials.
+
+For Docker development, use the [included Compose setup](docs/docker-compose.md), which mounts both the compiled node and its declared GraphQL parser dependency. If adapting an existing Compose setup, preserve existing `NODE_PATH` entries using the container's `:` separator and recreate the container after changing mounts.
 
 ## Operations
 

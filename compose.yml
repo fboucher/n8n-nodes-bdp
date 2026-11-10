@@ -1,0 +1,42 @@
+name: n8n-bdp-dev
+
+services:
+  n8n:
+    image: n8nio/n8n:2.44.4
+    ports:
+      - '127.0.0.1:${BDP_N8N_PORT:-5678}:5678'
+    environment:
+      N8N_CUSTOM_EXTENSIONS: /opt/n8n-bdp
+      NODE_PATH: /opt/bdp-deps/node_modules
+      N8N_SECURE_COOKIE: 'false'
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_VERSION_NOTIFICATIONS_ENABLED: 'false'
+      N8N_TEMPLATES_ENABLED: 'false'
+      N8N_UNVERIFIED_PACKAGES_ENABLED: 'true'
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - type: bind
+        source: ./dist
+        target: /opt/n8n-bdp
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./node_modules/graphql
+        target: /opt/bdp-deps/node_modules/graphql
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5678/healthz/readiness').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+
+volumes:
+  n8n-data:
