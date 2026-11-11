@@ -1,6 +1,6 @@
 # Local Docker Compose setup
 
-The included [`compose.yml`](../compose.yml) runs a standalone n8n **2.44.4** instance with this checkout's BDP node already loaded. No npm publication, custom image, `.env` file, or separate sandbox service is required. This is a local testing setup, not a production deployment.
+The included [`compose.yml`](../compose.yml) runs a standalone n8n **2.44.4** instance with this checkout's Building Data Platform (BDP) node already loaded. No npm publication, custom image, `.env` file, or separate sandbox service is required. This is a local testing setup, not a production deployment.
 
 1. Install Git, **Node.js 22 or later with npm**, and **Docker Desktop with Linux containers** (or Docker Engine with the Compose v2 plugin on Linux). Start Docker before continuing.
 
