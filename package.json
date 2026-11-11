@@ -1,0 +1,64 @@
+{
+	"name": "n8n-nodes-bdp",
+	"version": "0.1.0",
+	"description": "Read-only EcoStruxure Building Data Platform nodes for n8n",
+	"license": "MIT",
+	"homepage": "https://github.com/fboucher/n8n-nodes-bdp#readme",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"schneider-electric",
+		"building-data-platform",
+		"bdp"
+	],
+	"author": {
+		"name": "BDP Community Node Maintainers",
+		"email": "noreply@github.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/fboucher/n8n-nodes-bdp.git"
+	},
+	"bugs": {
+		"url": "https://github.com/fboucher/n8n-nodes-bdp/issues"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"test": "npm run build && node --test tests/*.test.cjs",
+		"test:docker": "npm run build && node tests/docker-smoke.cjs",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist",
+		"!dist/**/*.tsbuildinfo",
+		"examples"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": false,
+		"credentials": [
+			"dist/credentials/BdpOAuth2Api.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/Bdp/Bdp.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "^0.55.5",
+		"eslint": "9.39.4",
+		"prettier": "3.8.3",
+		"release-it": "20.2.0",
+		"typescript": "5.9.3"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	},
+	"dependencies": {
+		"graphql": "^16.15.0"
+	}
+}
