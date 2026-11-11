@@ -196,3 +196,24 @@ test('list search rejects unresolved parent expressions and invalid pagination w
 	await assert.rejects(search.call(context, undefined, '-1'), /pagination token/);
 	assert.equal(calls.length, 0);
 });
+
+test('optional list-search parents use the collection endpoint unless a resolved parent is selected', async () => {
+	const search = createListSearch({
+		path: 'Sites',
+		label: 'Site',
+		invalidResponseMessage: 'Invalid site response.',
+		parent: {
+			path: 'Organizations',
+			parameter: 'organizationId',
+			label: 'organization',
+			optional: true,
+		},
+	});
+	const { context: globalContext, calls: globalCalls } = searchContext('', [[]]);
+	await search.call(globalContext);
+	assert.equal(globalCalls[0].url.endsWith('/api/Sites'), true);
+
+	const { context: unresolvedContext, calls: unresolvedCalls } = searchContext('={{ $json.orgId }}', []);
+	await assert.rejects(search.call(unresolvedContext), /resolved organization ID/);
+	assert.equal(unresolvedCalls.length, 0);
+});
