@@ -1,4 +1,4 @@
-dist
-node_modules
+node_modules/
+dist/
 .local/
 temp/bdp-api-spec-v3-bundle-3.0.json
