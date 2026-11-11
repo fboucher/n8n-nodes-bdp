@@ -8,6 +8,8 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { getBuildings } from './listSearch/getBuildings';
+import { getOrganizations } from './listSearch/getOrganizations';
+import { getSites } from './listSearch/getSites';
 import { getMeasurementValues } from './listSearch/getMeasurementValues';
 import { normalizeWindow } from './shared/time';
 import { fetchAllPages, getBdpRequest, requestBdpGraphql } from './shared/transport';
@@ -40,6 +42,96 @@ const buildingResource: INodeProperties = {
 		},
 	],
 };
+
+function scopeLocator(
+	displayName: string,
+	name: string,
+	method: string,
+	scope: string,
+): INodeProperties {
+	return {
+		displayName,
+		name,
+		type: 'resourceLocator' as const,
+		default: { mode: 'list', value: '' },
+		required: true,
+		displayOptions: { show: { resource: ['building'], operation: ['getAll'], buildingScope: [scope] } },
+		modes: [
+			{
+				displayName: 'From list',
+				name: 'list',
+				type: 'list',
+				placeholder: `Select ${displayName.toLowerCase()}...`,
+				typeOptions: { searchListMethod: method, searchable: true },
+			},
+			{
+				displayName: 'By ID',
+				name: 'id',
+				type: 'string',
+				placeholder: `Enter ${displayName.toLowerCase()} ID`,
+			},
+		],
+	};
+}
+
+const buildingScopeProperties: INodeProperties[] = [
+	{
+		displayName: 'Scope',
+		name: 'buildingScope',
+		type: 'options',
+		default: 'all',
+		displayOptions: { show: { resource: ['building'], operation: ['getAll'] } },
+		options: [
+			{ name: 'All Accessible', value: 'all' },
+			{ name: 'Within Organization', value: 'organization' },
+			{ name: 'Within Site', value: 'site' },
+		],
+		description: 'Which buildings to list',
+	},
+	scopeLocator('Organization', 'organizationId', 'getOrganizations', 'organization'),
+	scopeLocator('Site', 'siteId', 'getSites', 'site'),
+	{
+		displayName: 'Additional Filters',
+		name: 'buildingFilters',
+		type: 'collection',
+		placeholder: 'Add Filter',
+		default: {},
+		displayOptions: { show: { resource: ['building'], operation: ['getAll'] } },
+		options: [
+			{ displayName: 'Floor Count', name: 'floorCount', type: 'number', default: 0, description: 'Filter by number of floors' },
+			{ displayName: 'Include Counts', name: 'includeCounts', type: 'boolean', default: true, description: 'Whether to include floor, space and measurement counts' },
+			{ displayName: 'Measurement Count', name: 'measurementCount', type: 'number', default: 0, description: 'Filter by number of measurements' },
+			{ displayName: 'Metadata', name: 'metadata', type: 'string', default: '', description: 'Filter by metadata' },
+			{ displayName: 'Order By', name: 'orderBy', type: 'string', default: '', description: 'Sort order accepted by BDP' },
+			{ displayName: 'Reference ID', name: 'referenceId', type: 'string', default: '', description: 'Filter by reference ID' },
+			{ displayName: 'Space Count', name: 'spaceCount', type: 'number', default: 0, description: 'Filter by number of spaces' },
+		],
+	},
+	{
+		displayName: 'Options',
+		name: 'buildingGetOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: { show: { resource: ['building'], operation: ['getById'] } },
+		options: [
+			{ displayName: 'Include Counts', name: 'includeCounts', type: 'boolean', default: true, description: 'Whether to include floor, space and measurement counts' },
+		],
+	},
+	{
+		displayName: 'Building Picker Scope',
+		name: 'locatorScope',
+		type: 'collection',
+		placeholder: 'Add Scope',
+		default: {},
+		displayOptions: { show: { resource: ['building', 'measurementValue'], operation: ['getById', 'getAll', 'getHistorical'] } },
+		description: 'Optionally narrow the building "From list" picker to an organization or site',
+		options: [
+			{ displayName: 'Organization ID', name: 'organizationId', type: 'string', default: '' },
+			{ displayName: 'Site ID', name: 'siteId', type: 'string', default: '' },
+		],
+	},
+];
 
 const measurementBuildingResource: INodeProperties = {
 	...buildingResource,
@@ -233,6 +325,7 @@ const properties: INodeProperties[] = [
 		displayOptions: { show: { resource: ['graphql'], operation: ['executeQuery'] } },
 		description: 'Named query to execute. Required when the document contains multiple queries.',
 	},
+	...buildingScopeProperties,
 	buildingResource,
 	measurementBuildingResource,
 	measurementResource,
@@ -327,6 +420,26 @@ async function executeOperation(
 	const filters: IDataObject = {};
 	if (operation === 'getAll' && resource === 'building') {
 		path = '/api/Buildings';
+		const scope = context.getNodeParameter('buildingScope', itemIndex, 'all') as string;
+		for (const [kind, param, base] of [
+			['organization', 'organizationId', 'Organizations'],
+			['site', 'siteId', 'Sites'],
+		]) {
+			if (scope !== kind) continue;
+			const id = (
+				context.getNodeParameter(param, itemIndex, '', { extractValue: true }) as string
+			).trim();
+			if (!id) {
+				throw new NodeOperationError(context.getNode(), `${param === 'siteId' ? 'Site' : 'Organization'} ID is required.`);
+			}
+			path = `/api/${base}/${encodeURIComponent(id)}/Buildings`;
+		}
+		const extra = context.getNodeParameter('buildingFilters', itemIndex, {}) as IDataObject;
+		for (const key of ['referenceId', 'metadata', 'floorCount', 'spaceCount', 'measurementCount', 'orderBy']) {
+			const v = extra[key];
+			if (v !== undefined && v !== null && v !== '') filters[key] = v as string | number;
+		}
+		if (extra.includeCounts === true) filters.includeCounts = true;
 		const name = context.getNodeParameter('name', itemIndex, '') as string;
 		if (name) filters.name = name;
 	} else if (operation === 'getById' && resource === 'building') {
@@ -376,7 +489,12 @@ async function executeOperation(
 	}
 
 	if (operation === 'getById') {
-		const response = await getBdpRequest(context)(path, {});
+		const getQs: IDataObject = {};
+		if (resource === 'building') {
+			const opts = context.getNodeParameter('buildingGetOptions', itemIndex, {}) as IDataObject;
+			if (opts.includeCounts === true) getQs.includeCounts = true;
+		}
+		const response = await getBdpRequest(context)(path, getQs);
 		if (
 			typeof response.data !== 'object' ||
 			response.data === null ||
@@ -410,6 +528,8 @@ export class Bdp implements INodeType {
 	methods = {
 		listSearch: {
 			getBuildings,
+			getOrganizations,
+			getSites,
 			getMeasurementValues,
 		},
 	};

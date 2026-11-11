@@ -21,6 +21,9 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Resource | Operations |
 | --- | --- |
 | Building | List, Get, Historical Values |
+
+Building **List** has a *Scope* option (All accessible, Within organization, Within site) and optional filters (reference ID, metadata, floor/space/measurement count, order by, include counts). Building **Get** accepts optional *Include Counts*. The building picker can be narrowed with *Building Picker Scope*. Defaults are unchanged.
+
 | Measurement Point | List, Historical Values |
 | GraphQL | Execute Query (read-only) |
 

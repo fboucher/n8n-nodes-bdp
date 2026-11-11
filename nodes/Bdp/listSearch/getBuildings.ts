@@ -7,7 +7,17 @@ export async function getBuildings(
 	paginationToken?: string,
 ): Promise<INodeListSearchResult> {
 	const skip = paginationToken ? Number(paginationToken) : 0;
-	const page = await getBdpRequest(this)('/api/Buildings', {
+	let path = '/api/Buildings';
+	let scope: { organizationId?: string; siteId?: string } = {};
+	try {
+		scope = (this.getCurrentNodeParameter('locatorScope') as typeof scope) ?? {};
+	} catch {
+		// Not available outside the editor; fall back to all buildings.
+	}
+	if (scope.siteId?.trim()) path = `/api/Sites/${encodeURIComponent(scope.siteId.trim())}/Buildings`;
+	else if (scope.organizationId?.trim())
+		path = `/api/Organizations/${encodeURIComponent(scope.organizationId.trim())}/Buildings`;
+	const page = await getBdpRequest(this)(path, {
 		take: 50,
 		skip,
 		...(filter ? { name: filter } : {}),
