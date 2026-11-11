@@ -39,7 +39,7 @@ export function createListSearch(options: {
 	path: string;
 	label: string;
 	invalidResponseMessage: string;
-	parent?: { parameter: string; path: string; label: string };
+	parent?: { parameter: string; path: string; label: string; optional?: boolean };
 }) {
 	return async function (
 		this: ILoadOptionsFunctions,
@@ -49,12 +49,20 @@ export function createListSearch(options: {
 		let path = `/api/${options.path}`;
 		if (options.parent) {
 			const id = this.getNodeParameter(options.parent.parameter, '', { extractValue: true });
-			if (typeof id !== 'string' || !id.trim() || id.includes('{{') || id.includes('}}')) {
+			const missing = typeof id !== 'string' || !id.trim();
+			if (missing && !options.parent.optional) {
 				throw new Error(
 					`Select or enter a resolved ${options.parent.label} ID before searching ${options.label.toLowerCase()}s.`,
 				);
 			}
-			path = `/api/${options.parent.path}/${encodeURIComponent(id)}/${options.path}`;
+			if (!missing) {
+				if (id.includes('{{') || id.includes('}}')) {
+					throw new Error(
+						`Select or enter a resolved ${options.parent.label} ID before searching ${options.label.toLowerCase()}s.`,
+					);
+				}
+				path = `/api/${options.parent.path}/${encodeURIComponent(id)}/${options.path}`;
+			}
 		}
 		const skip = paginationToken ? Number(paginationToken) : 0;
 		if (!Number.isSafeInteger(skip) || skip < 0)

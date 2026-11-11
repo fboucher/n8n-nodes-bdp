@@ -36,7 +36,7 @@ export const paginationProperties: INodeProperties[] = [
 		default: false,
 		displayOptions: {
 			show: {
-				resource: ['measurementValue', 'building'],
+				resource: ['measurementValue', 'building', 'organization', 'site'],
 				operation: ['getAll', 'getHistorical'],
 			},
 			hide: {
@@ -56,7 +56,7 @@ export const paginationProperties: INodeProperties[] = [
 		default: 100,
 		displayOptions: {
 			show: {
-				resource: ['measurementValue', 'building'],
+				resource: ['measurementValue', 'building', 'organization', 'site'],
 				operation: ['getAll', 'getHistorical'],
 				returnAll: [false],
 			},
@@ -78,6 +78,8 @@ export const resourceProperty: INodeProperties = {
 		{ name: 'Building', value: 'building' },
 		{ name: 'GraphQL', value: 'graphql' },
 		{ name: 'Measurement Point', value: 'measurementValue' },
+		{ name: 'Organization', value: 'organization' },
+		{ name: 'Site', value: 'site' },
 	],
 	default: 'building',
 };
@@ -89,7 +91,7 @@ export const nameFilter: INodeProperties = {
 	default: '',
 	displayOptions: {
 		show: {
-			resource: ['building', 'measurementValue'],
+			resource: ['building', 'measurementValue', 'organization', 'site'],
 			operation: ['getAll'],
 		},
 	},

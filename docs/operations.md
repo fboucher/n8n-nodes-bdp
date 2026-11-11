@@ -4,6 +4,10 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |
+| Organization | List | Lists accessible native organization records; optional name, site-count, and ordering filters. |
+| Organization | Get | Retrieves the full native record for one selected or manually entered organization ID. |
+| Site | List | Lists accessible sites or sites within a selected organization; optional name, metadata, building-count, and ordering filters. |
+| Site | Get | Retrieves the full native record for one selected or manually entered site ID. |
 | Building | List | Lists all accessible native building records by default, following pagination; optional server-side name filter and optional Limit. |
 | Building | Get | Retrieves the full native record for one selected or manually entered building ID. |
 | Building | Historical Values | Reads building-wide history directly without enumerating points. |
@@ -14,7 +18,7 @@ For GraphQL queries, see [GraphQL](graphql.md).
 
 ## Pagination and limits
 
-Building List defaults to **Return All**, so it follows pagination to list all accessible buildings. Turn Return All off to apply its optional Limit (default 100). Other list and historical operations retain their 100-record Limit default with an explicit **Return All** option.
+Building List defaults to **Return All**, so it follows pagination to list all accessible buildings. Turn Return All off to apply its optional Limit (default 100). Organization, Site, and other list and historical operations retain their 100-record Limit default with an explicit **Return All** option.
 
 Each API page requests no more than 5,000 records. Results preserve the API's native fields and value types and are returned as individually linked n8n items; empty results produce zero items.
 
@@ -36,7 +40,7 @@ A minimal building-list configuration. Bind your own BDP credential and select i
 }
 ```
 
-Use Building **Get** when you need the full details for one building ID; **List** calls the collection endpoint and returns each accessible building separately.
+Organization and Site **List** can return all accessible records or narrow sites to an organization. Use **Get** when you need the full details for one organization, site, or building ID; **List** calls the collection endpoint and returns each accessible record separately.
 
 Importable sanitized workflows for scheduled point history and direct building history are in [`examples/`](../examples/).
 

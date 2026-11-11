@@ -11,6 +11,22 @@ import { getBuildings } from './resources/building/listSearch';
 import { getMeasurementValues } from './resources/measurementPoint/listSearch';
 import { executeBuilding } from './resources/building/execute';
 import { buildingOperation, buildingResource } from './resources/building/properties';
+import { getOrganizations } from './resources/organization/listSearch';
+import { executeOrganization } from './resources/organization/execute';
+import {
+	organizationFilters,
+	organizationOperation,
+	organizationResource,
+} from './resources/organization/properties';
+import { getSites } from './resources/site/listSearch';
+import { executeSite } from './resources/site/execute';
+import {
+	siteFilters,
+	siteGetOrganizationResource,
+	siteOperation,
+	siteOrganizationResource,
+	siteResource,
+} from './resources/site/properties';
 import { executeMeasurementPoint } from './resources/measurementPoint/execute';
 import {
 	measurementBuildingResource,
@@ -30,14 +46,22 @@ import {
 const properties: INodeProperties[] = [
 	resourceProperty,
 	buildingOperation,
+	organizationOperation,
+	siteOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
 	buildingResource,
+	organizationResource,
+	siteOrganizationResource,
+	siteGetOrganizationResource,
+	siteResource,
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
 	...measurementFilters,
+	...organizationFilters,
+	...siteFilters,
 	...historyProperties,
 	...paginationProperties,
 ];
@@ -47,6 +71,8 @@ const resourceExecutors: Record<
 	(context: IExecuteFunctions, itemIndex: number, operation: string) => Promise<IDataObject[]>
 > = {
 	building: executeBuilding,
+	organization: executeOrganization,
+	site: executeSite,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -71,6 +97,8 @@ export class Bdp implements INodeType {
 	methods = {
 		listSearch: {
 			getBuildings,
+			getOrganizations,
+			getSites,
 			getMeasurementValues,
 		},
 	};

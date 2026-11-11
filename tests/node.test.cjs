@@ -3,6 +3,8 @@ const test = require('node:test');
 const { Bdp } = require('../dist/nodes/Bdp/Bdp.node.js');
 const { getBuildings } = require('../dist/nodes/Bdp/listSearch/getBuildings.js');
 const { getMeasurementValues } = require('../dist/nodes/Bdp/listSearch/getMeasurementValues.js');
+const { getOrganizations } = require('../dist/nodes/Bdp/resources/organization/listSearch.js');
+const { getSites } = require('../dist/nodes/Bdp/resources/site/listSearch.js');
 
 function createContext(parameters, responses, inputItems = [{ json: {} }], continueOnFail = false) {
 	const calls = [];
@@ -306,4 +308,232 @@ test('measurement selector requires a resolved building and safely scopes its qu
 	);
 	assert.deepEqual(calls[0].qs, { take: 50, skip: 50, name: 'Temp' });
 	assert.deepEqual(result.results[0], { name: 'Temperature (m-1)', value: 'm-1' });
+});
+
+test('Organization List applies supported filters across pages and Get returns a native record', async () => {
+	const organizations = [
+		{ id: 'o-1', name: 'North', siteCount: 2, active: true },
+		{ id: 'o-2', name: 'South', siteCount: 0, active: false },
+	];
+	const { context, calls } = createContext(
+		[
+			{
+				resource: 'organization',
+				operation: 'getAll',
+				name: 'Region',
+				siteCount: 0,
+				orderBy: 'NameAscending',
+				returnAll: true,
+			},
+		],
+		[
+			{ body: organizations.slice(0, 1), headers: { 'x-total-count': '2' } },
+			{ body: organizations.slice(1), headers: { 'x-total-count': '2' } },
+		],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output, organizations.map((json) => ({ json, pairedItem: { item: 0 } })));
+	assert.deepEqual(calls.map(({ url, qs }) => ({
+		path: new URL(url).pathname,
+		qs,
+	})), [
+		{ path: '/api/Organizations', qs: { name: 'Region', siteCount: 0, orderBy: 'NameAscending', take: 5000, skip: 0 } },
+		{ path: '/api/Organizations', qs: { name: 'Region', siteCount: 0, orderBy: 'NameAscending', take: 5000, skip: 1 } },
+	]);
+
+	const { context: getContext, calls: getCalls } = createContext(
+		[{ resource: 'organization', operation: 'getById', organizationId: { mode: 'id', value: 'org/1' } }],
+		[{ body: organizations[0], headers: {} }],
+	);
+	const [getOutput] = await new Bdp().execute.call(getContext);
+	assert.deepEqual(getOutput[0].json, organizations[0]);
+	assert.equal(new URL(getCalls[0].url).pathname, '/api/Organizations/org%2F1');
+});
+
+test('Organization Get rejects a missing ID and a non-record detail response', async () => {
+	const { context, calls } = createContext(
+		[{ resource: 'organization', operation: 'getById' }],
+		[],
+	);
+	await assert.rejects(new Bdp().execute.call(context), /Organization ID is required/);
+	assert.equal(calls.length, 0);
+
+	const { context: invalidContext } = createContext(
+		[{ resource: 'organization', operation: 'getById', organizationId: { mode: 'id', value: 'o-1' } }],
+		[{ body: [], headers: {} }],
+	);
+	await assert.rejects(new Bdp().execute.call(invalidContext), /invalid organization detail response/);
+});
+
+test('Site List supports accessible and organization-scoped endpoints with filters and empty results', async () => {
+	const { context, calls } = createContext(
+		[
+			{
+				resource: 'site',
+				operation: 'getAll',
+				scope: 'all',
+				name: 'West',
+				metadata: 'region:west',
+				buildingCount: 0,
+				orderBy: 'NameAscending',
+				returnAll: false,
+				limit: 5,
+			},
+		],
+		[{ body: [], headers: {} }],
+	);
+	const [emptyOutput] = await new Bdp().execute.call(context);
+	assert.deepEqual(emptyOutput, []);
+	assert.equal(new URL(calls[0].url).pathname, '/api/Sites');
+	assert.deepEqual(calls[0].qs, {
+		name: 'West',
+		metadata: 'region:west',
+		buildingCount: 0,
+		orderBy: 'NameAscending',
+		take: 5,
+		skip: 0,
+	});
+
+	const sites = [{ id: 's-1', name: 'West', buildingCount: 0, metadata: { region: 'west' } }];
+	const { context: scopedContext, calls: scopedCalls } = createContext(
+		[
+			{
+				resource: 'site',
+				operation: 'getAll',
+				scope: 'organization',
+				organizationId: { mode: 'id', value: 'org/1' },
+				name: 'West',
+				metadata: 'region:west',
+				buildingCount: 0,
+				orderBy: 'NameAscending',
+				returnAll: true,
+			},
+		],
+		[
+			{ body: sites, headers: {} },
+			{ body: [], headers: {} },
+		],
+	);
+	const [scopedOutput] = await new Bdp().execute.call(scopedContext);
+	assert.deepEqual(scopedOutput.map(({ json }) => json), sites);
+	assert.equal(new URL(scopedCalls[0].url).pathname, '/api/Organizations/org%2F1/Sites');
+	assert.deepEqual(scopedCalls[0].qs, {
+		name: 'West',
+		metadata: 'region:west',
+		buildingCount: 0,
+		orderBy: 'NameAscending',
+		take: 5000,
+		skip: 0,
+	});
+});
+
+test('Site List requires an organization only in that scope and rejects invalid scope', async () => {
+	const { context, calls } = createContext(
+		[{ resource: 'site', operation: 'getAll', scope: 'organization' }],
+		[],
+	);
+	await assert.rejects(new Bdp().execute.call(context), /Organization ID is required/);
+	assert.equal(calls.length, 0);
+
+	const { context: invalidContext } = createContext(
+		[{ resource: 'site', operation: 'getAll', scope: 'unknown' }],
+		[],
+	);
+	await assert.rejects(new Bdp().execute.call(invalidContext), /supported site scope/);
+});
+
+test('Site Get uses the detail endpoint and validates IDs and response records', async () => {
+	const site = { id: 'site/1', name: 'North', buildingCount: 2, metadata: null };
+	const { context, calls } = createContext(
+		[{ resource: 'site', operation: 'getById', siteId: { mode: 'id', value: 'site/1' } }],
+		[{ body: site, headers: {} }],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output[0].json, site);
+	assert.equal(new URL(calls[0].url).pathname, '/api/Sites/site%2F1');
+
+	const { context: missingContext, calls: missingCalls } = createContext(
+		[{ resource: 'site', operation: 'getById' }],
+		[],
+	);
+	await assert.rejects(new Bdp().execute.call(missingContext), /Site ID is required/);
+	assert.equal(missingCalls.length, 0);
+
+	const { context: invalidContext } = createContext(
+		[{ resource: 'site', operation: 'getById', siteId: { mode: 'id', value: 's-1' } }],
+		[{ body: null, headers: {} }],
+	);
+	await assert.rejects(new Bdp().execute.call(invalidContext), /invalid site detail response/);
+});
+
+test('organization and site locators search by name and site search scopes only when an organization is selected', async () => {
+	const organization = { id: 'o-1', name: 'North' };
+	const { context: organizationContext, calls: organizationCalls } = createContext(
+		[{}],
+		[{ body: [organization], headers: {} }],
+	);
+	const organizationResult = await getOrganizations.call(organizationContext, 'North');
+	assert.equal(new URL(organizationCalls[0].url).pathname, '/api/Organizations');
+	assert.deepEqual(organizationResult.results[0], { name: 'North (o-1)', value: 'o-1' });
+
+	const site = { id: 's-1', name: 'North site' };
+	const { context: globalContext, calls: globalCalls } = createContext(
+		[{}],
+		[{ body: [site], headers: {} }],
+	);
+	const globalResult = await getSites.call(globalContext, 'North');
+	assert.equal(new URL(globalCalls[0].url).pathname, '/api/Sites');
+	assert.deepEqual(globalResult.results[0], { name: 'North site (s-1)', value: 's-1' });
+
+	const { context: scopedContext, calls: scopedCalls } = createContext(
+		[{ organizationId: { mode: 'id', value: 'org/1' } }],
+		[{ body: [site], headers: {} }],
+	);
+	await getSites.call(scopedContext, 'North');
+	assert.equal(new URL(scopedCalls[0].url).pathname, '/api/Organizations/org%2F1/Sites');
+
+	const nodeProperties = new Bdp().description.properties;
+	const orgSelector = nodeProperties.find(
+		({ name, displayOptions }) =>
+			name === 'organizationId' && displayOptions?.show?.resource?.includes('site'),
+	);
+	const siteSelector = nodeProperties.find(({ name }) => name === 'siteId');
+	const siteGetOrganizationSelector = nodeProperties.find(
+		({ name, displayOptions }) =>
+			name === 'organizationId' &&
+			displayOptions?.show?.resource?.includes('site') &&
+			displayOptions?.show?.operation?.includes('getById'),
+	);
+	const scope = nodeProperties.find(({ name }) => name === 'scope');
+	assert.ok(orgSelector && siteGetOrganizationSelector && siteSelector && scope);
+	assert.equal(orgSelector.type, 'resourceLocator');
+	assert.equal(siteGetOrganizationSelector.required, false);
+	assert.equal(siteSelector.type, 'resourceLocator');
+	assert.deepEqual(scope.options.map(({ value }) => value), ['all', 'organization']);
+	assert.deepEqual(orgSelector.displayOptions.show.scope, ['organization']);
+	assert.equal(orgSelector.modes[0].typeOptions.searchable, true);
+	assert.equal(siteSelector.modes[0].typeOptions.searchable, true);
+});
+
+test('organization-scoped site lists retain per-input links and IDs', async () => {
+	const { context, calls } = createContext(
+		[
+			{ resource: 'site', operation: 'getAll', scope: 'organization', organizationId: { mode: 'id', value: 'o-1' }, returnAll: false, limit: 1 },
+			{ resource: 'site', operation: 'getAll', scope: 'organization', organizationId: { mode: 'id', value: 'o-2' }, returnAll: false, limit: 1 },
+		],
+		[
+			{ body: [{ id: 's-1' }], headers: {} },
+			{ body: [{ id: 's-2' }], headers: {} },
+		],
+		[{ json: { organizationId: 'o-1' } }, { json: { organizationId: 'o-2' } }],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output.map(({ json, pairedItem }) => [json.id, pairedItem.item]), [
+		['s-1', 0],
+		['s-2', 1],
+	]);
+	assert.deepEqual(calls.map(({ url }) => new URL(url).pathname), [
+		'/api/Organizations/o-1/Sites',
+		'/api/Organizations/o-2/Sites',
+	]);
 });

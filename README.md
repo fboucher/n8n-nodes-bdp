@@ -2,7 +2,7 @@
 
 This is an n8n community node. It lets you read data from Schneider Electric EcoStruxure **Building Data Platform (BDP)** in your n8n workflows.
 
-Building Data Platform (BDP) exposes building, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access to both.
+Building Data Platform (BDP) exposes organization, site, building, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access to both.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -22,6 +22,8 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | --- | --- |
 | Building | List, Get, Historical Values |
 | Measurement Point | List, Historical Values |
+| Organization | List, Get |
+| Site | List, Get |
 | GraphQL | Execute Query (read-only) |
 
 All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
