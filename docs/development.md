@@ -8,6 +8,19 @@
 
 To run a local n8n instance with this node loaded, see [Docker Compose](docker-compose.md).
 
+## Node structure
+
+Resource-specific properties, execution, and list searches live under `nodes/Bdp/resources/`.
+Shared historical and pagination parameters remain in `nodes/Bdp/shared/` to preserve their
+existing visibility and defaults. Use `fetchScopedList` for documented parent-child list
+routes: supply an explicit scope-to-path mapping, parent ID, child segment, filters, ordering,
+and pagination options. It delegates requests and pagination to the shared transport.
+
+Use `createResourceLocator` and `createListSearch` for new selectors. Scoped searches must
+declare their parent parameter and path; a missing or unresolved parent is rejected rather
+than searching a different collection. Register each search method on the node when exposing
+a new selector. These helpers do not themselves expose new operations.
+
 ## Dev loop
 
 ```sh
