@@ -6,6 +6,13 @@
 - Self-hosted n8n with community nodes enabled. Packaging is checked against n8n **2.44.4**; older 1.x releases are not certified. Validate the exact n8n release used by your deployment before production use.
 - TypeScript and the `@n8n/node-cli` supplied by this repository.
 
+TypeScript is pinned to 5.9.3 because the n8n CLI's TypeScript ESLint stack does not
+support TypeScript 7's native compiler API. This also preserves the existing
+CommonJS/Node module resolution configuration. ESLint is pinned to 9.29.0 to match
+the CLI's bundled version and keep lint plugin dependencies resolvable on clean
+installs. Dependabot skips TypeScript and ESLint major updates until the CLI's lint
+tooling and compiler configuration can migrate together.
+
 To run a local n8n instance with this node loaded, see [Docker Compose](docker-compose.md).
 
 ## Node structure
