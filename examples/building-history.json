@@ -1,5 +1,5 @@
 {
-  "name": "BDP direct building history (placeholder)",
+  "name": "BDP daily building history (template)",
   "nodes": [
     {
       "parameters": {
@@ -28,16 +28,15 @@
         },
         "start": "={{$now.minus({days: 1}).toISO()}}",
         "end": "={{$now.toISO()}}",
-        "returnAll": false,
-        "limit": 100
+        "returnAll": true
       },
       "id": "bdp-building-history",
-      "name": "Read Building History",
+      "name": "Read Previous 24 Hours",
       "type": "n8n-nodes-bdp.bdp",
       "typeVersion": 1,
-      "position": [460, 300],
+      "position": [480, 300],
       "credentials": {
-        "bdpApi": {
+        "bdpOAuth2Api": {
           "name": "Bind your BDP credential"
         }
       }
@@ -48,14 +47,26 @@
       "name": "Use Native Records",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [680, 300]
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "content": "Before activating: bind a BDP Community OAuth2 API credential and replace the building ID. This template reads the previous 24 hours once per day and returns all pages. Confirm access to the selected building. Scheduled runs are not snapshots or exactly-once reads; account for overlaps or gaps if your workflow requires deduplication.",
+        "height": 200,
+        "width": 620
+      },
+      "id": "bdp-building-guide",
+      "name": "Setup and Limits",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 40]
     }
   ],
   "connections": {
     "Daily Schedule": {
-      "main": [[{ "node": "Read Building History", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Read Previous 24 Hours", "type": "main", "index": 0 }]]
     },
-    "Read Building History": {
+    "Read Previous 24 Hours": {
       "main": [[{ "node": "Use Native Records", "type": "main", "index": 0 }]]
     }
   },
