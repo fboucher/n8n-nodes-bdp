@@ -1,5 +1,5 @@
 {
-  "name": "BDP scheduled point history (placeholder)",
+  "name": "BDP daily measurement point history (template)",
   "nodes": [
     {
       "parameters": {
@@ -20,63 +20,23 @@
     },
     {
       "parameters": {
-        "resource": "building",
-        "operation": "getAll",
-        "returnAllBuildings": true
-      },
-      "id": "bdp-buildings",
-      "name": "Discover Buildings",
-      "type": "n8n-nodes-bdp.bdp",
-      "typeVersion": 1,
-      "position": [460, 300],
-      "credentials": {
-        "bdpApi": {
-          "name": "Bind your BDP credential"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "resource": "measurementValue",
-        "operation": "getAll",
-        "buildingId": {
-          "mode": "id",
-          "value": "={{$json.id}}"
-        },
-        "returnAll": false,
-        "limit": 100
-      },
-      "id": "bdp-measurements",
-      "name": "Discover Measurement Points",
-      "type": "n8n-nodes-bdp.bdp",
-      "typeVersion": 1,
-      "position": [680, 300],
-      "credentials": {
-        "bdpApi": {
-          "name": "Bind your BDP credential"
-        }
-      }
-    },
-    {
-      "parameters": {
         "resource": "measurementValue",
         "operation": "getHistorical",
         "measurementId": {
           "mode": "id",
-          "value": "={{$json.id}}"
+          "value": "REPLACE_WITH_MEASUREMENT_POINT_ID"
         },
         "start": "={{$now.minus({days: 1}).toISO()}}",
         "end": "={{$now.toISO()}}",
-        "returnAll": false,
-        "limit": 100
+        "returnAll": true
       },
       "id": "bdp-point-history",
-      "name": "Read Point History",
+      "name": "Read Previous 24 Hours",
       "type": "n8n-nodes-bdp.bdp",
       "typeVersion": 1,
-      "position": [900, 300],
+      "position": [480, 300],
       "credentials": {
-        "bdpApi": {
+        "bdpOAuth2Api": {
           "name": "Bind your BDP credential"
         }
       }
@@ -87,20 +47,26 @@
       "name": "Use Native Records",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1120, 300]
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "content": "Before activating: bind a BDP Community OAuth2 API credential and replace the measurement point ID. The ID can be entered directly; a building or point-discovery step is not required. This template reads the previous 24 hours once per day and returns all pages. Scheduled runs are not snapshots or exactly-once reads; account for overlaps or gaps if your workflow requires deduplication.",
+        "height": 220,
+        "width": 660
+      },
+      "id": "bdp-point-guide",
+      "name": "Setup and Limits",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 40]
     }
   ],
   "connections": {
     "Daily Schedule": {
-      "main": [[{ "node": "Discover Buildings", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Read Previous 24 Hours", "type": "main", "index": 0 }]]
     },
-    "Discover Buildings": {
-      "main": [[{ "node": "Discover Measurement Points", "type": "main", "index": 0 }]]
-    },
-    "Discover Measurement Points": {
-      "main": [[{ "node": "Read Point History", "type": "main", "index": 0 }]]
-    },
-    "Read Point History": {
+    "Read Previous 24 Hours": {
       "main": [[{ "node": "Use Native Records", "type": "main", "index": 0 }]]
     }
   },

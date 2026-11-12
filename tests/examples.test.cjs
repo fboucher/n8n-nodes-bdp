@@ -29,6 +29,46 @@ for (const filename of ['graphql-nested-query.json', 'graphql-two-pages.json']) 
 	});
 }
 
+for (const [filename, resource, idParameter] of [
+	['building-history.json', 'building', 'buildingId'],
+	['phase-one-scheduled-extraction.json', 'measurementValue', 'measurementId'],
+]) {
+	test(`${filename} uses the current read-only history operation and credential`, () => {
+		const workflow = JSON.parse(
+			fs.readFileSync(path.join(__dirname, '..', 'examples', filename), 'utf8'),
+		);
+		assert.equal(workflow.active, false);
+		const names = new Set(workflow.nodes.map((node) => node.name));
+		assert.equal(names.size, workflow.nodes.length);
+		for (const [source, outputs] of Object.entries(workflow.connections)) {
+			assert.ok(names.has(source));
+			for (const links of outputs.main) for (const link of links) assert.ok(names.has(link.node));
+		}
+
+		const bdpNode = workflow.nodes.find((node) => node.type === 'n8n-nodes-bdp.bdp');
+		assert.ok(bdpNode);
+		assert.equal(bdpNode.parameters.resource, resource);
+		assert.equal(bdpNode.parameters.operation, 'getHistorical');
+		assert.equal(bdpNode.parameters[idParameter].mode, 'id');
+		assert.match(bdpNode.parameters[idParameter].value, /^REPLACE_WITH_/);
+		assert.match(bdpNode.parameters.start, /^={{\$now\.minus\(\{days: 1\}\)\.toISO\(\)}}$/);
+		assert.match(bdpNode.parameters.end, /^={{\$now\.toISO\(\)}}$/);
+		assert.equal(bdpNode.parameters.returnAll, true);
+		assert.deepEqual(Object.keys(bdpNode.credentials), ['bdpOAuth2Api']);
+
+		const properties = new Bdp().description.properties;
+		const resourceProperty = properties.find((property) => property.name === 'resource');
+		assert.ok(resourceProperty.options.some((option) => option.value === resource));
+		const operationProperty = properties.find(
+			(property) =>
+				property.name === 'operation' &&
+				property.displayOptions.show.resource.includes(resource),
+		);
+		assert.ok(operationProperty.options.some((option) => option.value === 'getHistorical'));
+		assert.equal(new Bdp().description.credentials[0].name, 'bdpOAuth2Api');
+	});
+}
+
 test('two-page workflow sends exactly the displayed page variables, preserves envelopes and returns to the loop', async () => {
 	const workflow = require('../examples/graphql-two-pages.json');
 	const inputNode = workflow.nodes.find((node) => node.type === 'n8n-nodes-base.code');
