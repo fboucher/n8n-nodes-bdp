@@ -34,10 +34,10 @@ import {
 } from './resources/site/properties';
 import { executeMeasurementPoint } from './resources/measurementPoint/execute';
 import {
-	measurementBuildingResource,
 	measurementFilters,
 	measurementOperation,
 	measurementResource,
+	measurementScopeProperties,
 } from './resources/measurementPoint/properties';
 import { executeGraphql } from './resources/graphql/execute';
 import { executeFloor } from './resources/floor/execute';
@@ -144,7 +144,7 @@ const properties: INodeProperties[] = [
 	deviceGroupResource,
 	dataSetResource,
 	eventHubResource,
-	measurementBuildingResource,
+	...measurementScopeProperties,
 	measurementResource,
 	nameFilter,
 	...buildingFilters,
