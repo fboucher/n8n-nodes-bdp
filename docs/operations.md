@@ -25,7 +25,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
 | Event Hub | List | Lists configured event hubs via `GET /api/EventHubs`; optional name and ordering filters. Credential-like fields are redacted. |
 | Event Hub | Get | Retrieves one event hub via `GET /api/EventHubs/{eventHubId}` by selected or manually entered ID. Credential-like fields are redacted. |
-| Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
+| Measurement Point | List | Lists points in a building (default), on a floor, in a space, on a device, in a device group, or in a data set; optional name, ontology-type, unit, reference ID, metadata, context, writeable, updated-after, commissioned status, and ordering filters. |
+| Measurement Point | Get | Retrieves one point via `GET /api/MeasurementValues/{measurementId}` by selected or manually entered ID. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
 For GraphQL queries, see [GraphQL](graphql.md).
@@ -73,6 +74,8 @@ Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sour
 Data Set **List** and **Get** only issue GET requests; create, update, and delete are deliberately out of scope.
 
 Event Hub **List** and **Get** only issue GET requests; the PATCH endpoint is deliberately out of scope. **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
+
+Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. PATCH endpoints are out of scope.
 
 ## Out of scope
 

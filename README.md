@@ -26,7 +26,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Device Group | List, Get |
 | Event Hub | List, Get |
 | Floor | List, Get |
-| Measurement Point | List, Historical Values |
+| Measurement Point | List, Get, Historical Values |
 | Organization | List, Get |
 | Site | List, Get |
 | Source | List, Get |
@@ -50,6 +50,8 @@ Device Group List has a Scope of In building or From source, with optional refer
 Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. This resource is strictly read-only: create, update, and delete are not supported.
 
 Event Hub List returns the event hubs configured for your application, with optional name and ordering filters; Event Hub Get accepts a manual ID or a searchable selection. This resource is strictly read-only (the PATCH endpoint is not supported). Because the response schema was not available when this was built, any field whose name looks like a credential (connection string, key, secret, token, password, SAS) is returned as `[REDACTED]`; see [REST operations](docs/operations.md).
+
+Measurement Point List has a Scope of In building (the default, unchanged), On floor, In space, On device, In device group, or In data set, showing only the relevant parent selector. It supports name, ontology type, unit, reference ID, metadata, context, Writeable, Updated After, Commissioned Status, and ordering filters; unset filters are not sent, and Updated After uses the same strict ISO 8601 validation and UTC normalization as historical values. Measurement Point Get accepts a manual ID or a searchable selection, and the Measurement Point selector follows the chosen scope. Workflows saved before scopes existed keep using the building.
 
 ## Credentials
 
