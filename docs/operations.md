@@ -21,6 +21,10 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Device | Get | Retrieves the full native record for one selected or manually entered device ID. |
 | Device Group | List | Lists native device groups in a building or from a source; optional reference ID, metadata, commissioned status, commissioned-before, decommissioned-after, and ordering filters. |
 | Device Group | Get | Retrieves the full native record for one selected or manually entered device group ID. |
+| Floor | Historical Values | Reads history for a floor via `GET /api/Floors/{floorId}/HistoricalValues`. |
+| Space | Historical Values | Reads history for a space via `GET /api/Spaces/{spaceId}/HistoricalValues`. |
+| Device | Historical Values | Reads history for a device via `GET /api/Devices/{deviceId}/HistoricalValues`. |
+| Device Group | Historical Values | Reads history for a device group via `GET /api/DeviceGroups/{deviceGroupId}/HistoricalValues`. |
 | Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
 | Event Hub | List | Lists configured event hubs via `GET /api/EventHubs`; optional name and ordering filters. Credential-like fields are redacted. |
@@ -76,6 +80,8 @@ Data Set **List** and **Get** only issue GET requests; create, update, and delet
 Event Hub **List** and **Get** only issue GET requests; the PATCH endpoint is deliberately out of scope. **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
 
 Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. PATCH endpoints are out of scope.
+
+**Historical Values design:** history is an operation on each parent resource (Building, Floor, Space, Device, Device Group, Measurement Point), not a scope of another operation. Select the parent (its selector can be narrowed as for Get), then enter Start and End. They use the same strict ISO 8601 validation with seconds and an explicit UTC offset or Z, UTC normalization, ascending order, Start earlier than End, Return All / Limit, retries, and later-page failure handling as Building history. Existing Building and Measurement Point history are unchanged.
 
 ## Out of scope
 

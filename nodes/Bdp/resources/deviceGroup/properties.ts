@@ -6,7 +6,7 @@ import { sourceResource } from '../source/properties';
 type Show = Record<string, string[]>;
 
 const listShow: Show = { resource: ['deviceGroup'], operation: ['getAll'] };
-const getShow: Show = { resource: ['deviceGroup'], operation: ['getById'] };
+const getShow: Show = { resource: ['deviceGroup'], operation: ['getById', 'getHistorical'] };
 
 const scopeOptions = [
 	{ name: 'In Building', value: 'building' },
@@ -80,6 +80,7 @@ export const deviceGroupOperation: INodeProperties = {
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
 		{ name: 'List', value: 'getAll', action: 'Get many device groups' },
 		{ name: 'Get', value: 'getById', action: 'Get a device group' },
+		{ name: 'Historical Values', value: 'getHistorical', action: 'Get device group history' },
 	],
 	default: 'getAll',
 };
@@ -125,13 +126,15 @@ export const deviceGroupFilters: INodeProperties[] = [
 	timestampFilter('Decommissioned After', 'decommissionedAfter', 'decommissioned after'),
 ];
 
+const pageShow = { ...listShow, operation: ['getAll', 'getHistorical'] };
+
 export const deviceGroupPaginationProperties: INodeProperties[] = [
 	{
 		displayName: 'Return All',
 		name: 'returnAll',
 		type: 'boolean',
 		default: false,
-		displayOptions: { show: listShow },
+		displayOptions: { show: pageShow },
 		description: 'Whether to return all results or only up to a given limit',
 	},
 	{
@@ -141,7 +144,7 @@ export const deviceGroupPaginationProperties: INodeProperties[] = [
 		typeOptions: { minValue: 1 },
 		// eslint-disable-next-line n8n-nodes-base/node-param-default-wrong-for-limit
 		default: 100,
-		displayOptions: { show: { ...listShow, returnAll: [false] } },
+		displayOptions: { show: { ...pageShow, returnAll: [false] } },
 		description: 'Max number of results to return',
 	},
 ];

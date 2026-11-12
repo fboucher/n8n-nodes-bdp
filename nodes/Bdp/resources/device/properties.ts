@@ -7,7 +7,7 @@ import { spaceResource } from '../space/properties';
 type Show = Record<string, string[]>;
 
 const listShow: Show = { resource: ['device'], operation: ['getAll'] };
-const getShow: Show = { resource: ['device'], operation: ['getById'] };
+const getShow: Show = { resource: ['device'], operation: ['getById', 'getHistorical'] };
 
 const scopeOptions = [
 	{ name: 'In Building', value: 'building' },
@@ -145,6 +145,7 @@ export const deviceOperation: INodeProperties = {
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
 		{ name: 'List', value: 'getAll', action: 'Get many devices' },
 		{ name: 'Get', value: 'getById', action: 'Get a device' },
+		{ name: 'Historical Values', value: 'getHistorical', action: 'Get device history' },
 	],
 	default: 'getAll',
 };
@@ -177,13 +178,15 @@ export const deviceCommissionedStatus: INodeProperties = {
 	description: 'Only return devices with this commissioned status',
 };
 
+const pageShow = { ...listShow, operation: ['getAll', 'getHistorical'] };
+
 export const devicePaginationProperties: INodeProperties[] = [
 	{
 		displayName: 'Return All',
 		name: 'returnAll',
 		type: 'boolean',
 		default: false,
-		displayOptions: { show: listShow },
+		displayOptions: { show: pageShow },
 		description: 'Whether to return all results or only up to a given limit',
 	},
 	{
@@ -193,7 +196,7 @@ export const devicePaginationProperties: INodeProperties[] = [
 		typeOptions: { minValue: 1 },
 		// eslint-disable-next-line n8n-nodes-base/node-param-default-wrong-for-limit
 		default: 100,
-		displayOptions: { show: { ...listShow, returnAll: [false] } },
+		displayOptions: { show: { ...pageShow, returnAll: [false] } },
 		description: 'Max number of results to return',
 	},
 ];

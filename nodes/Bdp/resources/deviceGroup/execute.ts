@@ -3,6 +3,7 @@ import { NodeOperationError } from 'n8n-workflow';
 import { pagination, requiredId, unsupported } from '../../shared/execution';
 import { fetchScopedList } from '../../shared/scopedList';
 import { normalizeTimestamp } from '../../shared/time';
+import { fetchHistoricalValues } from '../../shared/history';
 import { getBdpRequest } from '../../shared/transport';
 
 const scopes: Record<string, { path: string; parameter: string; label: string }> = {
@@ -62,6 +63,13 @@ export async function executeDeviceGroup(
 			);
 		}
 		return [response.data as IDataObject];
+	}
+	if (operation === 'getHistorical') {
+		return fetchHistoricalValues(context, itemIndex, {
+			path: 'DeviceGroups',
+			parameter: 'deviceGroupId',
+			label: 'Device Group',
+		});
 	}
 	return unsupported(context);
 }
