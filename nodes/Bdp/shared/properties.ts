@@ -76,6 +76,7 @@ export const resourceProperty: INodeProperties = {
 	noDataExpression: true,
 	options: [
 		{ name: 'Building', value: 'building' },
+		{ name: 'Device', value: 'device' },
 		{ name: 'Floor', value: 'floor' },
 		{ name: 'GraphQL', value: 'graphql' },
 		{ name: 'Measurement Point', value: 'measurementValue' },
@@ -94,7 +95,7 @@ export const nameFilter: INodeProperties = {
 	default: '',
 	displayOptions: {
 		show: {
-			resource: ['building', 'measurementValue', 'organization', 'site', 'floor', 'space', 'source'],
+			resource: ['building', 'measurementValue', 'organization', 'site', 'floor', 'space', 'source', 'device'],
 			operation: ['getAll'],
 		},
 	},

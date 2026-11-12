@@ -17,6 +17,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Space | Get | Retrieves the full native record for one selected or manually entered space ID. |
 | Source | List | Lists accessible integration sources via `GET /api/Sources`; optional type, name, and ordering filters. |
 | Source | Get | Retrieves the full native record for one selected or manually entered source ID via `GET /api/Sources/{sourceId}`. |
+| Device | List | Lists native devices in a building, on a floor, in a space, or from an integration source; optional name, metadata, reference ID, ontology type, product type, vendor identifier, commissioned status, and ordering filters. |
+| Device | Get | Retrieves the full native record for one selected or manually entered device ID. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
@@ -57,6 +59,8 @@ Floor **List** requires a Building and calls `GET /api/Buildings/{buildingId}/Fl
 Space **List** has a **Scope** of In building (`GET /api/Buildings/{buildingId}/Spaces`) or On floor (`GET /api/Floors/{floorId}/Spaces`). Only the selected scope's parent is shown; to search floors by name, also pick a Building, or enter a Floor ID directly. Space **Get** calls `GET /api/Spaces/{spaceId}`; its selector searches the chosen building or floor, and a manual ID needs no parent. Commissioned Status is a constrained option (Any, Commissioned, Decommissioned).
 
 Source **List** and **Get** only issue GET requests. `POST /api/Sources/{sourceId}/OnDemand/{methodName}` is deliberately out of scope and cannot be sent from this resource.
+
+Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devices`, `/api/Spaces/{id}/Devices`, or `/api/Sources/{id}/Devices` depending on **Scope**; only the selected scope's parent selector is shown. Device **Get** calls `GET /api/Devices/{deviceId}`; its selector searches the chosen parent, and a manual ID needs no parent.
 
 ## Out of scope
 
