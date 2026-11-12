@@ -21,6 +21,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Resource | Operations |
 | --- | --- |
 | Building | List, Get, Historical Values |
+| Data Set | List, Get |
 | Device | List, Get |
 | Device Group | List, Get |
 | Floor | List, Get |
@@ -44,6 +45,8 @@ Source List returns the integration sources accessible to you, with optional typ
 Device List has a Scope of In building, On floor, In space, or From source, showing only the relevant parent selector, with optional name, metadata, reference ID, ontology type, product type, vendor identifier, Commissioned Status, and ordering filters. Device Get accepts a manual ID or a searchable selection scoped to the chosen parent.
 
 Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the GetOnDemand and SetOnDemand endpoints are not supported.
+
+Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. This resource is strictly read-only: create, update, and delete are not supported.
 
 ## Credentials
 
