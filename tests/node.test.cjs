@@ -5,6 +5,7 @@ const { getBuildings } = require('../dist/nodes/Bdp/listSearch/getBuildings.js')
 const { getMeasurementValues } = require('../dist/nodes/Bdp/listSearch/getMeasurementValues.js');
 const { getOrganizations } = require('../dist/nodes/Bdp/resources/organization/listSearch.js');
 const { getSites } = require('../dist/nodes/Bdp/resources/site/listSearch.js');
+const { getFloors } = require('../dist/nodes/Bdp/resources/floor/listSearch.js');
 
 function createContext(parameters, responses, inputItems = [{ json: {} }], continueOnFail = false) {
 	const calls = [];
@@ -49,6 +50,160 @@ function errorWithStatus(statusCode, headers = {}) {
 	error.response = { statusCode, headers, body: 'private response body must not leak' };
 	return error;
 }
+
+test('Floor List uses the building route and retains native types, filters and links across pages', async () => {
+	const floor = { id: 'f-1', name: 'Ground', metadata: null, spaceCount: 0, active: true };
+	const filters = {
+		name: 'Ground', referenceId: 'ref', metadata: 'key=value',
+		spaceCount: 0, measurementCount: 3, orderBy: 'NameAscending',
+	};
+	const { context, calls } = createContext([
+		{ resource: 'floor', operation: 'getAll', buildingId: { mode: 'list', value: 'b/1' }, returnAll: true, ...filters },
+		{ resource: 'floor', operation: 'getAll', buildingId: { mode: 'id', value: 'b/2' }, limit: 1 },
+	], [
+		{ body: [floor], headers: { 'x-total-count': '2' } },
+		{ body: [{ id: 'f-2' }], headers: { 'x-total-count': '2' } },
+		{ body: [{ id: 'f-3' }], headers: { 'x-total-count': '3' } },
+	], [{ json: {} }, { json: {} }]);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output, [
+		{ json: floor, pairedItem: { item: 0 } },
+		{ json: { id: 'f-2' }, pairedItem: { item: 0 } },
+		{ json: { id: 'f-3' }, pairedItem: { item: 1 } },
+	]);
+	assert.deepEqual(calls.map(({ url }) => new URL(url).pathname), [
+		'/api/Buildings/b%2F1/Floors', '/api/Buildings/b%2F1/Floors', '/api/Buildings/b%2F2/Floors',
+	]);
+	assert.deepEqual(calls.map(({ qs }) => qs), [
+		{ ...filters, take: 5000, skip: 0 },
+		{ ...filters, take: 5000, skip: 1 },
+		{ take: 1, skip: 0 },
+	]);
+});
+
+test('Floor List defaults to Limit 100 and returns no items for an empty collection', async () => {
+	const { context, calls } = createContext(
+		[{ resource: 'floor', operation: 'getAll', buildingId: { mode: 'id', value: 'b-1' } }],
+		[{ body: [], headers: {} }],
+	);
+	assert.deepEqual(await new Bdp().execute.call(context), [[]]);
+	assert.deepEqual(calls[0].qs, { take: 100, skip: 0 });
+});
+
+test('Floor Get uses selected or manual IDs without requiring a building', async () => {
+	for (const mode of ['list', 'id']) {
+		const floor = { id: 'f/1', metadata: { reference: null }, spaceCount: 2 };
+		const { context, calls } = createContext(
+			[{ resource: 'floor', operation: 'getById', floorId: { mode, value: 'f/1' } }],
+			[{ body: floor, headers: {} }],
+		);
+		assert.deepEqual(await new Bdp().execute.call(context), [[{ json: floor, pairedItem: { item: 0 } }]]);
+		assert.equal(new URL(calls[0].url).pathname, '/api/Floors/f%2F1');
+		assert.deepEqual(calls[0].qs, {});
+	}
+});
+
+test('Floor operations reject missing IDs and invalid limits without making requests', async () => {
+	for (const [parameters, message] of [
+		[{ operation: 'getAll' }, /Building ID is required/],
+		[{ operation: 'getAll', buildingId: { mode: 'id', value: ' ' } }, /Building ID is required/],
+		[{ operation: 'getAll', buildingId: { mode: 'id', value: 'b-1' }, limit: 0 }, /Limit must/],
+		[{ operation: 'getById' }, /Floor ID is required/],
+		[{ operation: 'getById', floorId: { mode: 'id', value: ' ' } }, /Floor ID is required/],
+		[{ operation: 'invalid' }, /not supported/],
+	]) {
+		const { context, calls } = createContext([{ resource: 'floor', ...parameters }], []);
+		await assert.rejects(new Bdp().execute.call(context), message);
+		assert.equal(calls.length, 0);
+	}
+});
+
+test('Floor operations reject malformed responses and propagate safe API errors', async () => {
+	for (const [operation, body, message] of [
+		['getAll', {}, /invalid list response/],
+		['getById', [], /invalid floor detail response/],
+		['getById', null, /invalid floor detail response/],
+		['getById', 'invalid', /invalid floor detail response/],
+	]) {
+		const { context } = createContext([{
+			resource: 'floor', operation, buildingId: { mode: 'id', value: 'b-1' },
+			floorId: { mode: 'id', value: 'f-1' },
+		}], [{ body, headers: {} }]);
+		await assert.rejects(new Bdp().execute.call(context), message);
+	}
+	for (const operation of ['getAll', 'getById']) {
+		const { context, calls } = createContext([{
+			resource: 'floor', operation, returnAll: true,
+			buildingId: { mode: 'id', value: 'b-1' }, floorId: { mode: 'id', value: 'f-1' },
+		}], operation === 'getAll' ? [
+			{ body: [{ id: 'f-1' }], headers: { 'x-total-count': '2' } },
+			errorWithStatus(403),
+		] : [errorWithStatus(404)]);
+		await assert.rejects(new Bdp().execute.call(context), (error) => {
+			assert.match(error.message, operation === 'getAll' ? /denied access/ : /HTTP 404/);
+			assert.doesNotMatch(error.message, /private response body/);
+			return true;
+		});
+		assert.equal(calls.length, operation === 'getAll' ? 2 : 1);
+	}
+});
+
+test('Floor failures support continue-on-fail and preserve input linking', async () => {
+	const { context } = createContext([
+		{ resource: 'floor', operation: 'getById' },
+		{ resource: 'floor', operation: 'getById', floorId: { mode: 'id', value: 'f-2' } },
+	], [{ body: { id: 'f-2' }, headers: {} }], [{ json: {} }, { json: {} }], true);
+	const [output] = await new Bdp().execute.call(context);
+	assert.match(output[0].json.error, /Floor ID is required/);
+	assert.deepEqual(output[0].pairedItem, { item: 0 });
+	assert.deepEqual(output[1], { json: { id: 'f-2' }, pairedItem: { item: 1 } });
+});
+
+test('Floor search reads the current building for each search and supports filtering and paging', async () => {
+	const parameters = { buildingId: { mode: 'list', value: 'b/1' } };
+	const { context, calls } = createContext([parameters], [
+		{ body: Array.from({ length: 50 }, (_, i) => ({ id: `f-${i}`, name: i ? null : 'Ground' })), headers: {} },
+		{ body: [{ id: 'f-50', name: 'First' }], headers: {} },
+		{ body: [], headers: {} },
+	]);
+	const first = await getFloors.call(context, 'Ground');
+	assert.deepEqual(first.results[0], { name: 'Ground (f-0)', value: 'f-0' });
+	assert.deepEqual(first.results[1], { name: 'Floor f-1', value: 'f-1' });
+	assert.equal(first.paginationToken, '50');
+	const second = await getFloors.call(context, 'Ground', first.paginationToken);
+	assert.equal(second.paginationToken, undefined);
+	parameters.buildingId = { mode: 'id', value: 'b/2' };
+	assert.deepEqual(await getFloors.call(context, 'New'), { results: [], paginationToken: undefined });
+	assert.deepEqual(calls.map(({ url }) => new URL(url).pathname), [
+		'/api/Buildings/b%2F1/Floors', '/api/Buildings/b%2F1/Floors', '/api/Buildings/b%2F2/Floors',
+	]);
+	assert.deepEqual(calls.map(({ qs }) => qs), [
+		{ take: 50, skip: 0, name: 'Ground' },
+		{ take: 50, skip: 50, name: 'Ground' },
+		{ take: 50, skip: 0, name: 'New' },
+	]);
+	parameters.buildingId = { mode: 'id', value: '' };
+	await assert.rejects(getFloors.call(context), /resolved building ID/);
+	assert.equal(calls.length, 3);
+});
+
+test('Floor search rejects unresolved buildings, invalid pagination, malformed responses and API failures', async () => {
+	for (const value of ['', undefined, ' ', '={{ $json.buildingId }}']) {
+		const { context, calls } = createContext([{ buildingId: { mode: 'id', value } }], []);
+		await assert.rejects(getFloors.call(context), /resolved building ID/);
+		assert.equal(calls.length, 0);
+	}
+	const { context, calls } = createContext([{ buildingId: { mode: 'id', value: 'b-1' } }], []);
+	await assert.rejects(getFloors.call(context, '', '-1'), /pagination token/);
+	assert.equal(calls.length, 0);
+	for (const [response, message] of [
+		[{ body: {}, headers: {} }, /invalid floor search response/],
+		[errorWithStatus(403), /denied access/],
+	]) {
+		const { context } = createContext([{ buildingId: { mode: 'id', value: 'b-1' } }], [response]);
+		await assert.rejects(getFloors.call(context), message);
+	}
+});
 
 test('Building List returns all pages by default and preserves server-side filtering and item links', async () => {
 	const buildings = [
