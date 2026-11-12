@@ -8,8 +8,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Organization | Get | Retrieves the full native record for one selected or manually entered organization ID. |
 | Site | List | Lists accessible sites or sites within a selected organization; optional name, metadata, building-count, and ordering filters. |
 | Site | Get | Retrieves the full native record for one selected or manually entered site ID. |
-| Building | List | Lists all accessible native building records by default, following pagination; optional server-side name filter and optional Limit. |
-| Building | Get | Retrieves the full native record for one selected or manually entered building ID. |
+| Building | List | Lists all accessible buildings by default, or buildings within an organization or site; optional server-side filters, counts, ordering, and Limit. |
+| Building | Get | Retrieves the full native record for one selected or manually entered building ID, optionally including counts. |
 | Building | Historical Values | Reads building-wide history directly without enumerating points. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
@@ -41,6 +41,8 @@ A minimal building-list configuration. Bind your own BDP credential and select i
 ```
 
 Organization and Site **List** can return all accessible records or narrow sites to an organization. Use **Get** when you need the full details for one organization, site, or building ID; **List** calls the collection endpoint and returns each accessible record separately.
+
+Building **List** supports name, reference ID, metadata, floor count, space count, measurement count, and ordering filters. Enable **Include Counts** to request counts on List or Get; it is omitted by default. For Building Get, Historical Values, and the Measurement Point building selector, **Building Search Scope** can narrow the selector to an organization or site without changing the selected building's ID or detail endpoint.
 
 Importable sanitized workflows for scheduled point history and direct building history are in [`examples/`](../examples/).
 

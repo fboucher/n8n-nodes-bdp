@@ -12,12 +12,43 @@ export async function executeBuilding(
 	const page = pagination(context, itemIndex, operation === 'getAll');
 	const request = getBdpRequest(context);
 	if (operation === 'getAll') {
-		const name = context.getNodeParameter('name', itemIndex, '') as string;
-		return fetchAllPages(request, '/api/Buildings', name ? { name } : {}, page);
+		const scope = context.getNodeParameter('scope', itemIndex, 'all') as string;
+		const filters: IDataObject = {};
+		for (const key of [
+			'name',
+			'referenceId',
+			'metadata',
+			'floorCount',
+			'spaceCount',
+			'measurementCount',
+			'orderBy',
+		]) {
+			const value = context.getNodeParameter(key, itemIndex, '') as string | number;
+			if (value !== '') filters[key] = value;
+		}
+		if (context.getNodeParameter('includeCounts', itemIndex, false)) filters.includeCounts = true;
+		if (scope === 'all') return fetchAllPages(request, '/api/Buildings', filters, page);
+		if (scope === 'organization' || scope === 'site') {
+			const label = scope === 'organization' ? 'Organization' : 'Site';
+			const parentId = requiredId(context, itemIndex, `${scope}Id`, label);
+			return fetchScopedList(request, {
+				scope,
+				scopePaths: { organization: 'Organizations', site: 'Sites' },
+				parentId,
+				child: 'Buildings',
+				filters,
+				...page,
+			});
+		}
+		throw new NodeOperationError(context.getNode(), 'Choose a supported building scope.');
 	}
 	if (operation === 'getById') {
 		const id = requiredId(context, itemIndex, 'buildingId', 'Building');
-		const response = await request(`/api/Buildings/${encodeURIComponent(id)}`, {});
+		const includeCounts = context.getNodeParameter('includeCounts', itemIndex, false) as boolean;
+		const response = await request(
+			`/api/Buildings/${encodeURIComponent(id)}`,
+			includeCounts ? { includeCounts: true } : {},
+		);
 		if (
 			typeof response.data !== 'object' ||
 			response.data === null ||

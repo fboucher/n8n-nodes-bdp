@@ -28,6 +28,8 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 
 All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
 
+Building List can target all accessible buildings, an organization, or a site, with optional server-side filters and counts. Building Get can also request counts; the Building selector can be narrowed to an organization or site.
+
 ## Credentials
 
 Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, client secret, and scope provided by your BDP administrator, then choose the UAT or Production environment. See [Credentials](docs/credentials.md).

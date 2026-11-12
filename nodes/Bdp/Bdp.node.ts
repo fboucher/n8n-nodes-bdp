@@ -10,7 +10,12 @@ import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { getBuildings } from './resources/building/listSearch';
 import { getMeasurementValues } from './resources/measurementPoint/listSearch';
 import { executeBuilding } from './resources/building/execute';
-import { buildingOperation, buildingResource } from './resources/building/properties';
+import {
+	buildingFilters,
+	buildingOperation,
+	buildingResource,
+	buildingScopeProperties,
+} from './resources/building/properties';
 import { getOrganizations } from './resources/organization/listSearch';
 import { executeOrganization } from './resources/organization/execute';
 import {
@@ -51,6 +56,7 @@ const properties: INodeProperties[] = [
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
+	...buildingScopeProperties,
 	buildingResource,
 	organizationResource,
 	siteOrganizationResource,
@@ -59,6 +65,7 @@ const properties: INodeProperties[] = [
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
+	...buildingFilters,
 	...measurementFilters,
 	...organizationFilters,
 	...siteFilters,
