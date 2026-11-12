@@ -77,6 +77,7 @@ export const resourceProperty: INodeProperties = {
 	options: [
 		{ name: 'Building', value: 'building' },
 		{ name: 'Device', value: 'device' },
+		{ name: 'Device Group', value: 'deviceGroup' },
 		{ name: 'Floor', value: 'floor' },
 		{ name: 'GraphQL', value: 'graphql' },
 		{ name: 'Measurement Point', value: 'measurementValue' },

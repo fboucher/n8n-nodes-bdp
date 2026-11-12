@@ -78,6 +78,15 @@ import {
 	deviceResource,
 	deviceScopeProperties,
 } from './resources/device/properties';
+import { executeDeviceGroup } from './resources/deviceGroup/execute';
+import { getDeviceGroups } from './resources/deviceGroup/listSearch';
+import {
+	deviceGroupFilters,
+	deviceGroupOperation,
+	deviceGroupPaginationProperties,
+	deviceGroupResource,
+	deviceGroupScopeProperties,
+} from './resources/deviceGroup/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
 	historyProperties,
@@ -95,6 +104,7 @@ const properties: INodeProperties[] = [
 	spaceOperation,
 	sourceOperation,
 	deviceOperation,
+	deviceGroupOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
@@ -112,6 +122,8 @@ const properties: INodeProperties[] = [
 	sourceResource,
 	...deviceScopeProperties,
 	deviceResource,
+	...deviceGroupScopeProperties,
+	deviceGroupResource,
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
@@ -125,12 +137,14 @@ const properties: INodeProperties[] = [
 	...sourceFilters,
 	...deviceFilters,
 	deviceCommissionedStatus,
+	...deviceGroupFilters,
 	...historyProperties,
 	...paginationProperties,
 	...floorPaginationProperties,
 	...spacePaginationProperties,
 	...sourcePaginationProperties,
 	...devicePaginationProperties,
+	...deviceGroupPaginationProperties,
 ];
 
 const resourceExecutors: Record<
@@ -144,6 +158,7 @@ const resourceExecutors: Record<
 	space: executeSpace,
 	source: executeSource,
 	device: executeDevice,
+	deviceGroup: executeDeviceGroup,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -174,6 +189,7 @@ export class Bdp implements INodeType {
 			getSpaces,
 			getSources,
 			getDevices,
+			getDeviceGroups,
 			getMeasurementValues,
 		},
 	};
