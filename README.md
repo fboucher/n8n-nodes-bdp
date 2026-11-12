@@ -22,15 +22,15 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | --- | --- |
 | Building | List, Get, Historical Values |
 | Data Set | List, Get |
-| Device | List, Get |
-| Device Group | List, Get |
+| Device | List, Get, Historical Values |
+| Device Group | List, Get, Historical Values |
 | Event Hub | List, Get |
-| Floor | List, Get |
+| Floor | List, Get, Historical Values |
 | Measurement Point | List, Get, Historical Values |
 | Organization | List, Get |
 | Site | List, Get |
 | Source | List, Get |
-| Space | List, Get |
+| Space | List, Get, Historical Values |
 | GraphQL | Execute Query (read-only) |
 
 All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
@@ -52,6 +52,8 @@ Data Set List returns the data sets available to your application, with optional
 Event Hub List returns the event hubs configured for your application, with optional name and ordering filters; Event Hub Get accepts a manual ID or a searchable selection. This resource is strictly read-only (the PATCH endpoint is not supported). Because the response schema was not available when this was built, any field whose name looks like a credential (connection string, key, secret, token, password, SAS) is returned as `[REDACTED]`; see [REST operations](docs/operations.md).
 
 Measurement Point List has a Scope of In building (the default, unchanged), On floor, In space, On device, In device group, or In data set, showing only the relevant parent selector. It supports name, ontology type, unit, reference ID, metadata, context, Writeable, Updated After, Commissioned Status, and ordering filters; unset filters are not sent, and Updated After uses the same strict ISO 8601 validation and UTC normalization as historical values. Measurement Point Get accepts a manual ID or a searchable selection, and the Measurement Point selector follows the chosen scope. Workflows saved before scopes existed keep using the building.
+
+**Historical Values** is an operation on each parent resource: Building, Floor, Space, Device, Device Group, and Measurement Point. Floor, Space, Device, and Device Group Historical Values read their values directly (`GET /api/{Floors|Spaces|Devices|DeviceGroups}/{id}/HistoricalValues`) without listing measurement points first, using the same required Start and End (strict ISO 8601, UTC-normalized, Start earlier than End), ascending order, Return All / Limit pagination, and error handling as Building history.
 
 ## Credentials
 

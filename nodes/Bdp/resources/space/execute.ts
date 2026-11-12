@@ -2,6 +2,7 @@ import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { pagination, requiredId, unsupported } from '../../shared/execution';
 import { fetchScopedList } from '../../shared/scopedList';
+import { fetchHistoricalValues } from '../../shared/history';
 import { getBdpRequest } from '../../shared/transport';
 
 export async function executeSpace(
@@ -56,6 +57,13 @@ export async function executeSpace(
 			);
 		}
 		return [response.data as IDataObject];
+	}
+	if (operation === 'getHistorical') {
+		return fetchHistoricalValues(context, itemIndex, {
+			path: 'Spaces',
+			parameter: 'spaceId',
+			label: 'Space',
+		});
 	}
 	return unsupported(context);
 }
