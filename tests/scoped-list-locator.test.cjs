@@ -155,6 +155,24 @@ test('a locator ID expression resolves for each execution input', async () => {
 	assert.ok(calls[1].url.endsWith('/api/Buildings/b%2F2'));
 });
 
+test('n8n retains the selected building list and locator scopes and their parent IDs', () => {
+	for (const parameters of [
+		{ resource: 'building', operation: 'getAll', scope: 'organization', organizationId: { mode: 'id', value: 'o-1' } },
+		{ resource: 'building', operation: 'getAll', scope: 'site', siteId: { mode: 'id', value: 's-1' } },
+		{ resource: 'building', operation: 'getById', buildingSearchScope: 'site', siteId: { mode: 'id', value: 's-1' }, buildingId: { mode: 'id', value: 'b-1' } },
+		{ resource: 'measurementValue', operation: 'getAll', buildingSearchScope: 'organization', organizationId: { mode: 'id', value: 'o-1' }, buildingId: { mode: 'id', value: 'b-1' } },
+	]) {
+		const node = { name: 'BDP', type: 'n8n-nodes-bdp.bdp', typeVersion: 1, position: [0, 0], parameters };
+		const workflow = new Workflow({
+			nodes: [node], connections: {}, active: false,
+			nodeTypes: { getByNameAndVersion: () => new Bdp() },
+		});
+		for (const [key, value] of Object.entries(parameters)) {
+			assert.deepEqual(workflow.nodes.BDP.parameters[key], value, `${parameters.resource} ${parameters.operation}: ${key}`);
+		}
+	}
+});
+
 test('list search paginates names and IDs under a resolved parent', async () => {
 	const search = createListSearch({
 		path: 'Sites',

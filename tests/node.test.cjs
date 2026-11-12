@@ -90,6 +90,94 @@ test('Building List can be explicitly limited instead of returning all', async (
 	assert.equal(calls[0].qs.take, 2);
 });
 
+test('Building List keeps the default request and native output unchanged', async () => {
+	const building = { id: 'b-1', metadata: null, floorCount: 0 };
+	const { context, calls } = createContext(
+		[{ resource: 'building', operation: 'getAll' }],
+		[{ body: [building], headers: {} }],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output, [{ json: building, pairedItem: { item: 0 } }]);
+	assert.equal(new URL(calls[0].url).pathname, '/api/Buildings');
+	assert.deepEqual(calls[0].qs, { take: 5000, skip: 0 });
+});
+
+test('Building List applies all optional filters across pages in every scope', async () => {
+	for (const [scope, idParameter, path] of [
+		['all', null, '/api/Buildings'],
+		['organization', 'organizationId', '/api/Organizations/parent%2F1/Buildings'],
+		['site', 'siteId', '/api/Sites/parent%2F1/Buildings'],
+	]) {
+		const params = {
+			resource: 'building', operation: 'getAll', scope,
+			name: 'North', referenceId: 'ref', metadata: 'key=value',
+			floorCount: 0, spaceCount: 2, measurementCount: 3,
+			includeCounts: true, orderBy: 'NameAscending',
+		};
+		if (idParameter) params[idParameter] = { mode: 'id', value: 'parent/1' };
+		const { context, calls } = createContext([params], [
+			{ body: [{ id: 'b-1' }], headers: { 'x-total-count': '2' } },
+			{ body: [{ id: 'b-2' }], headers: { 'x-total-count': '2' } },
+		]);
+		const [output] = await new Bdp().execute.call(context);
+		assert.deepEqual(output.map(({ json }) => json.id), ['b-1', 'b-2']);
+		assert.ok(calls.every(({ url }) => new URL(url).pathname === path));
+		const filters = {
+			name: 'North', referenceId: 'ref', metadata: 'key=value',
+			floorCount: 0, spaceCount: 2, measurementCount: 3,
+			includeCounts: true, orderBy: 'NameAscending', take: 5000,
+		};
+		assert.deepEqual(calls.map(({ qs }) => qs), [
+			{ ...filters, skip: 0 }, { ...filters, skip: 1 },
+		]);
+	}
+});
+
+test('Building List rejects missing parents and invalid scopes before requesting', async () => {
+	for (const scope of ['organization', 'site', 'invalid']) {
+		const { context, calls } = createContext([{ resource: 'building', operation: 'getAll', scope }], []);
+		await assert.rejects(new Bdp().execute.call(context), scope === 'invalid' ? /supported building scope/ : /ID is required/);
+		assert.equal(calls.length, 0);
+	}
+});
+
+test('Building Get can request counts without changing its output', async () => {
+	const building = { id: 'b-1', floorCount: 0, spaceCount: 4 };
+	const { context, calls } = createContext(
+		[{ resource: 'building', operation: 'getById', buildingId: { mode: 'id', value: 'b-1' }, includeCounts: true }],
+		[{ body: building, headers: {} }],
+	);
+	const [output] = await new Bdp().execute.call(context);
+	assert.deepEqual(output, [{ json: building, pairedItem: { item: 0 } }]);
+	assert.deepEqual(calls[0].qs, { includeCounts: true });
+});
+
+test('Building search scopes use selected locators and ignore stale organization on site searches', async () => {
+	for (const [scope, idParameter, path] of [
+		['all', null, '/api/Buildings'],
+		['organization', 'organizationId', '/api/Organizations/parent%2F1/Buildings'],
+		['site', 'siteId', '/api/Sites/parent%2F1/Buildings'],
+	]) {
+		const params = { buildingSearchScope: scope };
+		if (idParameter) params[idParameter] = { mode: 'id', value: 'parent/1' };
+		const { context, calls } = createContext([params], [{ body: [{ id: 'b-1', name: 'North' }], headers: {} }]);
+		assert.deepEqual((await getBuildings.call(context, 'North', '50')).results, [{ name: 'North (b-1)', value: 'b-1' }]);
+		assert.equal(new URL(calls[0].url).pathname, path);
+		assert.deepEqual(calls[0].qs, { take: 50, skip: 50, name: 'North' });
+	}
+	for (const scope of ['organization', 'site']) {
+		const { context, calls } = createContext([{ buildingSearchScope: scope }], []);
+		await assert.rejects(getBuildings.call(context), /resolved .* ID/);
+		assert.equal(calls.length, 0);
+	}
+	const { context, calls } = createContext(
+		[{ resource: 'building', organizationId: { mode: 'id', value: 'stale' } }],
+		[{ body: [], headers: {} }],
+	);
+	await getSites.call(context);
+	assert.equal(new URL(calls[0].url).pathname, '/api/Sites');
+});
+
 test('Building Get requires an ID and calls the dedicated detail endpoint', async () => {
 	const building = { id: 'b-1', name: 'North', siteId: 'site-1', floorCount: 2 };
 	const { context, calls } = createContext(
@@ -504,7 +592,7 @@ test('organization and site locators search by name and site search scopes only 
 			displayOptions?.show?.resource?.includes('site') &&
 			displayOptions?.show?.operation?.includes('getById'),
 	);
-	const scope = nodeProperties.find(({ name }) => name === 'scope');
+	const scope = nodeProperties.find(({ name, displayOptions }) => name === 'scope' && displayOptions?.show?.resource?.includes('site'));
 	assert.ok(orgSelector && siteGetOrganizationSelector && siteSelector && scope);
 	assert.equal(orgSelector.type, 'resourceLocator');
 	assert.equal(siteGetOrganizationSelector.required, false);
