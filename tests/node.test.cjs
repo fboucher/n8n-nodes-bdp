@@ -553,6 +553,78 @@ test('measurement selector requires a resolved building and safely scopes its qu
 	assert.deepEqual(result.results[0], { name: 'Temperature (m-1)', value: 'm-1' });
 });
 
+test('Building List scopes to an organization or site and sends optional filters only when set', async () => {
+	for (const [scope, params, prefix] of [
+		['organization', { organizationId: { mode: 'id', value: 'org/1' } }, '/api/Organizations/org%2F1/Buildings'],
+		['site', { siteId: { mode: 'id', value: 'site-1' } }, '/api/Sites/site-1/Buildings'],
+	]) {
+		const { context, calls } = createContext(
+			[
+				{
+					resource: 'building',
+					operation: 'getAll',
+					scope,
+					...params,
+					referenceId: 'ref', floorCount: 3, includeCounts: true, orderBy: 'Name', returnAll: true,
+				},
+			],
+			[
+				{ body: [{ id: 'b-1' }, { id: 'b-2' }], headers: { 'x-total-count': '3' } },
+				{ body: [{ id: 'b-3' }], headers: { 'x-total-count': '3' } },
+			],
+		);
+		const [output] = await new Bdp().execute.call(context);
+		assert.equal(output.length, 3);
+		assert.ok(calls.every((c) => c.url.endsWith(prefix)));
+		for (const c of calls) {
+			assert.equal(c.qs.referenceId, 'ref');
+			assert.equal(c.qs.floorCount, 3);
+			assert.equal(c.qs.includeCounts, true);
+			assert.equal(c.qs.orderBy, 'Name');
+			assert.equal('metadata' in c.qs, false);
+		}
+	}
+});
+
+test('Building List scope requires an ID', async () => {
+	const { context, calls } = createContext(
+		[{ resource: 'building', operation: 'getAll', scope: 'site' }],
+		[],
+	);
+	await assert.rejects(new Bdp().execute.call(context), /Site ID is required/);
+	assert.equal(calls.length, 0);
+});
+
+test('Building Get sends includeCounts only when requested', async () => {
+	const { context, calls } = createContext(
+		[
+			{
+				resource: 'building',
+				operation: 'getById',
+				buildingId: { mode: 'id', value: 'b-1' },
+				includeCounts: true,
+			},
+		],
+		[{ body: { id: 'b-1' }, headers: {} }],
+	);
+	await new Bdp().execute.call(context);
+	assert.deepEqual(calls[0].qs, { includeCounts: true });
+});
+
+test('Building locator respects a selected site or organization', async () => {
+	for (const [scope, parameter, id, path] of [
+		['site', 'siteId', 's 1', '/api/Sites/s%201/Buildings'],
+		['organization', 'organizationId', 'o1', '/api/Organizations/o1/Buildings'],
+	]) {
+		const { context, calls } = createContext(
+			[{ buildingSearchScope: scope, [parameter]: { mode: 'id', value: id } }],
+			[{ body: [], headers: {} }],
+		);
+		await getBuildings.call(context);
+		assert.ok(calls[0].url.endsWith(path));
+	}
+});
+
 test('Organization List applies supported filters across pages and Get returns a native record', async () => {
 	const organizations = [
 		{ id: 'o-1', name: 'North', siteCount: 2, active: true },
