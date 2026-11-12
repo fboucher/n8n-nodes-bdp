@@ -81,6 +81,7 @@ export const resourceProperty: INodeProperties = {
 		{ name: 'Measurement Point', value: 'measurementValue' },
 		{ name: 'Organization', value: 'organization' },
 		{ name: 'Site', value: 'site' },
+		{ name: 'Space', value: 'space' },
 	],
 	default: 'building',
 };
@@ -92,7 +93,7 @@ export const nameFilter: INodeProperties = {
 	default: '',
 	displayOptions: {
 		show: {
-			resource: ['building', 'measurementValue', 'organization', 'site', 'floor'],
+			resource: ['building', 'measurementValue', 'organization', 'site', 'floor', 'space'],
 			operation: ['getAll'],
 		},
 	},

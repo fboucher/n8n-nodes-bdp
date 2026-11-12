@@ -25,6 +25,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Measurement Point | List, Historical Values |
 | Organization | List, Get |
 | Site | List, Get |
+| Space | List, Get |
 | GraphQL | Execute Query (read-only) |
 
 All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
@@ -32,6 +33,8 @@ All operations are read-only. Writes, commands, and subscriptions are not suppor
 Building List can target all accessible buildings, an organization, or a site, with optional server-side filters and counts. Building Get can also request counts; the Building selector can be narrowed to an organization or site.
 
 Floor List returns floors within a selected building, with optional name, reference ID, metadata, space-count, measurement-count, and ordering filters. Floor Get accepts a manual ID or a searchable selection scoped to the current building.
+
+Space List returns spaces either **In building** or **On floor**, showing only the relevant parent selector, with optional name, reference ID, metadata, ontology type, measurement-count, Commissioned Status, and ordering filters. Space Get accepts a manual ID or a searchable selection scoped to the chosen building or floor.
 
 ## Credentials
 
