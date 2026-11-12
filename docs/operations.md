@@ -21,6 +21,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Device | Get | Retrieves the full native record for one selected or manually entered device ID. |
 | Device Group | List | Lists native device groups in a building or from a source; optional reference ID, metadata, commissioned status, commissioned-before, decommissioned-after, and ordering filters. |
 | Device Group | Get | Retrieves the full native record for one selected or manually entered device group ID. |
+| Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
+| Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
@@ -65,6 +67,8 @@ Source **List** and **Get** only issue GET requests. `POST /api/Sources/{sourceI
 Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devices`, `/api/Spaces/{id}/Devices`, or `/api/Sources/{id}/Devices` depending on **Scope**; only the selected scope's parent selector is shown. Device **Get** calls `GET /api/Devices/{deviceId}`; its selector searches the chosen parent, and a manual ID needs no parent.
 
 Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sources/{id}/DeviceGroups`; **Commissioned Before** and **Decommissioned After** use the same strict ISO 8601 validation and UTC normalization as historical values. Device Group **Get** calls `GET /api/DeviceGroups/{deviceGroupId}`. Only GET requests are issued; `GetOnDemand` and `SetOnDemand` are deliberately out of scope.
+
+Data Set **List** and **Get** only issue GET requests; create, update, and delete are deliberately out of scope.
 
 ## Out of scope
 
