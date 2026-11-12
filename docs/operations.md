@@ -19,6 +19,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Source | Get | Retrieves the full native record for one selected or manually entered source ID via `GET /api/Sources/{sourceId}`. |
 | Device | List | Lists native devices in a building, on a floor, in a space, or from an integration source; optional name, metadata, reference ID, ontology type, product type, vendor identifier, commissioned status, and ordering filters. |
 | Device | Get | Retrieves the full native record for one selected or manually entered device ID. |
+| Device Group | List | Lists native device groups in a building or from a source; optional reference ID, metadata, commissioned status, commissioned-before, decommissioned-after, and ordering filters. |
+| Device Group | Get | Retrieves the full native record for one selected or manually entered device group ID. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
@@ -61,6 +63,8 @@ Space **List** has a **Scope** of In building (`GET /api/Buildings/{buildingId}/
 Source **List** and **Get** only issue GET requests. `POST /api/Sources/{sourceId}/OnDemand/{methodName}` is deliberately out of scope and cannot be sent from this resource.
 
 Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devices`, `/api/Spaces/{id}/Devices`, or `/api/Sources/{id}/Devices` depending on **Scope**; only the selected scope's parent selector is shown. Device **Get** calls `GET /api/Devices/{deviceId}`; its selector searches the chosen parent, and a manual ID needs no parent.
+
+Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sources/{id}/DeviceGroups`; **Commissioned Before** and **Decommissioned After** use the same strict ISO 8601 validation and UTC normalization as historical values. Device Group **Get** calls `GET /api/DeviceGroups/{deviceGroupId}`. Only GET requests are issued; `GetOnDemand` and `SetOnDemand` are deliberately out of scope.
 
 ## Out of scope
 
