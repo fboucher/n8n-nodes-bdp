@@ -23,6 +23,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Device Group | Get | Retrieves the full native record for one selected or manually entered device group ID. |
 | Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
+| Event Hub | List | Lists configured event hubs via `GET /api/EventHubs`; optional name and ordering filters. Credential-like fields are redacted. |
+| Event Hub | Get | Retrieves one event hub via `GET /api/EventHubs/{eventHubId}` by selected or manually entered ID. Credential-like fields are redacted. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
@@ -69,6 +71,8 @@ Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devic
 Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sources/{id}/DeviceGroups`; **Commissioned Before** and **Decommissioned After** use the same strict ISO 8601 validation and UTC normalization as historical values. Device Group **Get** calls `GET /api/DeviceGroups/{deviceGroupId}`. Only GET requests are issued; `GetOnDemand` and `SetOnDemand` are deliberately out of scope.
 
 Data Set **List** and **Get** only issue GET requests; create, update, and delete are deliberately out of scope.
+
+Event Hub **List** and **Get** only issue GET requests; the PATCH endpoint is deliberately out of scope. **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
 
 ## Out of scope
 

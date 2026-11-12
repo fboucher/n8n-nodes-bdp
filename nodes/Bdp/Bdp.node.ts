@@ -95,6 +95,14 @@ import {
 	dataSetPaginationProperties,
 	dataSetResource,
 } from './resources/dataSet/properties';
+import { executeEventHub } from './resources/eventHub/execute';
+import { getEventHubs } from './resources/eventHub/listSearch';
+import {
+	eventHubFilters,
+	eventHubOperation,
+	eventHubPaginationProperties,
+	eventHubResource,
+} from './resources/eventHub/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
 	historyProperties,
@@ -114,6 +122,7 @@ const properties: INodeProperties[] = [
 	deviceOperation,
 	deviceGroupOperation,
 	dataSetOperation,
+	eventHubOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
@@ -134,6 +143,7 @@ const properties: INodeProperties[] = [
 	...deviceGroupScopeProperties,
 	deviceGroupResource,
 	dataSetResource,
+	eventHubResource,
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
@@ -149,6 +159,7 @@ const properties: INodeProperties[] = [
 	deviceCommissionedStatus,
 	...deviceGroupFilters,
 	...dataSetFilters,
+	...eventHubFilters,
 	...historyProperties,
 	...paginationProperties,
 	...floorPaginationProperties,
@@ -157,6 +168,7 @@ const properties: INodeProperties[] = [
 	...devicePaginationProperties,
 	...deviceGroupPaginationProperties,
 	...dataSetPaginationProperties,
+	...eventHubPaginationProperties,
 ];
 
 const resourceExecutors: Record<
@@ -172,6 +184,7 @@ const resourceExecutors: Record<
 	device: executeDevice,
 	deviceGroup: executeDeviceGroup,
 	dataSet: executeDataSet,
+	eventHub: executeEventHub,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -204,6 +217,7 @@ export class Bdp implements INodeType {
 			getDevices,
 			getDeviceGroups,
 			getDataSets,
+			getEventHubs,
 			getMeasurementValues,
 		},
 	};
