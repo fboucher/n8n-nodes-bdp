@@ -34,10 +34,10 @@ import {
 } from './resources/site/properties';
 import { executeMeasurementPoint } from './resources/measurementPoint/execute';
 import {
-	measurementBuildingResource,
 	measurementFilters,
 	measurementOperation,
 	measurementResource,
+	measurementScopeProperties,
 } from './resources/measurementPoint/properties';
 import { executeGraphql } from './resources/graphql/execute';
 import { executeFloor } from './resources/floor/execute';
@@ -50,6 +50,59 @@ import {
 	floorPaginationProperties,
 	floorResource,
 } from './resources/floor/properties';
+import { executeSpace } from './resources/space/execute';
+import { getSpaces } from './resources/space/listSearch';
+import {
+	spaceCommissionedStatus,
+	spaceFilters,
+	spaceOperation,
+	spacePaginationProperties,
+	spaceResource,
+	spaceScopeProperties,
+} from './resources/space/properties';
+import { executeSource } from './resources/source/execute';
+import { getSources } from './resources/source/listSearch';
+import {
+	sourceFilters,
+	sourceOperation,
+	sourcePaginationProperties,
+	sourceResource,
+} from './resources/source/properties';
+import { executeDevice } from './resources/device/execute';
+import { getDevices } from './resources/device/listSearch';
+import {
+	deviceCommissionedStatus,
+	deviceFilters,
+	deviceOperation,
+	devicePaginationProperties,
+	deviceResource,
+	deviceScopeProperties,
+} from './resources/device/properties';
+import { executeDeviceGroup } from './resources/deviceGroup/execute';
+import { getDeviceGroups } from './resources/deviceGroup/listSearch';
+import {
+	deviceGroupFilters,
+	deviceGroupOperation,
+	deviceGroupPaginationProperties,
+	deviceGroupResource,
+	deviceGroupScopeProperties,
+} from './resources/deviceGroup/properties';
+import { executeDataSet } from './resources/dataSet/execute';
+import { getDataSets } from './resources/dataSet/listSearch';
+import {
+	dataSetFilters,
+	dataSetOperation,
+	dataSetPaginationProperties,
+	dataSetResource,
+} from './resources/dataSet/properties';
+import { executeEventHub } from './resources/eventHub/execute';
+import { getEventHubs } from './resources/eventHub/listSearch';
+import {
+	eventHubFilters,
+	eventHubOperation,
+	eventHubPaginationProperties,
+	eventHubResource,
+} from './resources/eventHub/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
 	historyProperties,
@@ -64,6 +117,12 @@ const properties: INodeProperties[] = [
 	organizationOperation,
 	siteOperation,
 	floorOperation,
+	spaceOperation,
+	sourceOperation,
+	deviceOperation,
+	deviceGroupOperation,
+	dataSetOperation,
+	eventHubOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
@@ -76,7 +135,16 @@ const properties: INodeProperties[] = [
 	floorBuildingResource,
 	floorGetBuildingResource,
 	floorResource,
-	measurementBuildingResource,
+	...spaceScopeProperties,
+	spaceResource,
+	sourceResource,
+	...deviceScopeProperties,
+	deviceResource,
+	...deviceGroupScopeProperties,
+	deviceGroupResource,
+	dataSetResource,
+	eventHubResource,
+	...measurementScopeProperties,
 	measurementResource,
 	nameFilter,
 	...buildingFilters,
@@ -84,9 +152,23 @@ const properties: INodeProperties[] = [
 	...organizationFilters,
 	...siteFilters,
 	...floorFilters,
+	...spaceFilters,
+	spaceCommissionedStatus,
+	...sourceFilters,
+	...deviceFilters,
+	deviceCommissionedStatus,
+	...deviceGroupFilters,
+	...dataSetFilters,
+	...eventHubFilters,
 	...historyProperties,
 	...paginationProperties,
 	...floorPaginationProperties,
+	...spacePaginationProperties,
+	...sourcePaginationProperties,
+	...devicePaginationProperties,
+	...deviceGroupPaginationProperties,
+	...dataSetPaginationProperties,
+	...eventHubPaginationProperties,
 ];
 
 const resourceExecutors: Record<
@@ -97,6 +179,12 @@ const resourceExecutors: Record<
 	organization: executeOrganization,
 	site: executeSite,
 	floor: executeFloor,
+	space: executeSpace,
+	source: executeSource,
+	device: executeDevice,
+	deviceGroup: executeDeviceGroup,
+	dataSet: executeDataSet,
+	eventHub: executeEventHub,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -124,6 +212,12 @@ export class Bdp implements INodeType {
 			getOrganizations,
 			getSites,
 			getFloors,
+			getSpaces,
+			getSources,
+			getDevices,
+			getDeviceGroups,
+			getDataSets,
+			getEventHubs,
 			getMeasurementValues,
 		},
 	};

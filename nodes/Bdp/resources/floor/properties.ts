@@ -10,7 +10,7 @@ export const floorBuildingResource: INodeProperties = {
 export const floorGetBuildingResource: INodeProperties = {
 	...buildingResource,
 	required: false,
-	displayOptions: { show: { resource: ['floor'], operation: ['getById'] } },
+	displayOptions: { show: { resource: ['floor'], operation: ['getById', 'getHistorical'] } },
 	description: 'Select a building to search its floors; not needed when entering a Floor ID',
 };
 
@@ -21,7 +21,7 @@ export const floorResource: INodeProperties = {
 		searchMethod: 'getFloors',
 		listPlaceholder: 'Select a floor...',
 		idPlaceholder: 'Enter a floor ID',
-		displayOptions: { show: { resource: ['floor'], operation: ['getById'] } },
+		displayOptions: { show: { resource: ['floor'], operation: ['getById', 'getHistorical'] } },
 	}),
 	typeOptions: { loadOptionsDependsOn: ['buildingId.value'] },
 };
@@ -36,6 +36,7 @@ export const floorOperation: INodeProperties = {
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
 		{ name: 'List', value: 'getAll', action: 'Get many floors' },
 		{ name: 'Get', value: 'getById', action: 'Get a floor' },
+		{ name: 'Historical Values', value: 'getHistorical', action: 'Get floor history' },
 	],
 	default: 'getAll',
 };
@@ -59,7 +60,7 @@ export const floorPaginationProperties: INodeProperties[] = [
 		name: 'returnAll',
 		type: 'boolean',
 		default: false,
-		displayOptions: { show: { resource: ['floor'], operation: ['getAll'] } },
+		displayOptions: { show: { resource: ['floor'], operation: ['getAll', 'getHistorical'] } },
 		description: 'Whether to return all results or only up to a given limit',
 	},
 	{
@@ -70,7 +71,7 @@ export const floorPaginationProperties: INodeProperties[] = [
 		// eslint-disable-next-line n8n-nodes-base/node-param-default-wrong-for-limit
 		default: 100,
 		displayOptions: {
-			show: { resource: ['floor'], operation: ['getAll'], returnAll: [false] },
+			show: { resource: ['floor'], operation: ['getAll', 'getHistorical'], returnAll: [false] },
 		},
 		description: 'Max number of results to return',
 	},
