@@ -60,6 +60,14 @@ import {
 	spaceResource,
 	spaceScopeProperties,
 } from './resources/space/properties';
+import { executeSource } from './resources/source/execute';
+import { getSources } from './resources/source/listSearch';
+import {
+	sourceFilters,
+	sourceOperation,
+	sourcePaginationProperties,
+	sourceResource,
+} from './resources/source/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
 	historyProperties,
@@ -75,6 +83,7 @@ const properties: INodeProperties[] = [
 	siteOperation,
 	floorOperation,
 	spaceOperation,
+	sourceOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
@@ -89,6 +98,7 @@ const properties: INodeProperties[] = [
 	floorResource,
 	...spaceScopeProperties,
 	spaceResource,
+	sourceResource,
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
@@ -99,10 +109,12 @@ const properties: INodeProperties[] = [
 	...floorFilters,
 	...spaceFilters,
 	spaceCommissionedStatus,
+	...sourceFilters,
 	...historyProperties,
 	...paginationProperties,
 	...floorPaginationProperties,
 	...spacePaginationProperties,
+	...sourcePaginationProperties,
 ];
 
 const resourceExecutors: Record<
@@ -114,6 +126,7 @@ const resourceExecutors: Record<
 	site: executeSite,
 	floor: executeFloor,
 	space: executeSpace,
+	source: executeSource,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -142,6 +155,7 @@ export class Bdp implements INodeType {
 			getSites,
 			getFloors,
 			getSpaces,
+			getSources,
 			getMeasurementValues,
 		},
 	};

@@ -15,6 +15,8 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Floor | Get | Retrieves the full native record for one selected or manually entered floor ID. |
 | Space | List | Lists native spaces in a building or on a floor; optional name, reference ID, metadata, ontology type, measurement-count, commissioned status, and ordering filters. |
 | Space | Get | Retrieves the full native record for one selected or manually entered space ID. |
+| Source | List | Lists accessible integration sources via `GET /api/Sources`; optional type, name, and ordering filters. |
+| Source | Get | Retrieves the full native record for one selected or manually entered source ID via `GET /api/Sources/{sourceId}`. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
@@ -53,6 +55,8 @@ Importable sanitized workflows for scheduled point history and direct building h
 Floor **List** requires a Building and calls `GET /api/Buildings/{buildingId}/Floors`. It defaults to a 100-record Limit and supports **Return All**. Floor **Get** calls `GET /api/Floors/{floorId}`. Select a Building to search its floors by name, or enter a Floor ID directly without a building. Floor searches always use the currently selected building, including after changing it. The Building selector also supports **Building Search Scope**.
 
 Space **List** has a **Scope** of In building (`GET /api/Buildings/{buildingId}/Spaces`) or On floor (`GET /api/Floors/{floorId}/Spaces`). Only the selected scope's parent is shown; to search floors by name, also pick a Building, or enter a Floor ID directly. Space **Get** calls `GET /api/Spaces/{spaceId}`; its selector searches the chosen building or floor, and a manual ID needs no parent. Commissioned Status is a constrained option (Any, Commissioned, Decommissioned).
+
+Source **List** and **Get** only issue GET requests. `POST /api/Sources/{sourceId}/OnDemand/{methodName}` is deliberately out of scope and cannot be sent from this resource.
 
 ## Out of scope
 
