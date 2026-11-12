@@ -37,6 +37,17 @@ export const buildingScopeProperties: INodeProperties[] = [
 		},
 		description: 'Optionally narrow the Building selector to an organization or site',
 	},
+	{
+		displayName: 'Building Search Scope',
+		name: 'buildingSearchScope',
+		type: 'options',
+		options: scopeOptions,
+		default: 'all',
+		displayOptions: {
+			show: { resource: ['floor'], operation: ['getAll', 'getById'] },
+		},
+		description: 'Optionally narrow the Building selector to an organization or site',
+	},
 	...[
 		{ scopeParameter: 'scope', resource: 'building', operations: ['getAll'] },
 		{
@@ -48,6 +59,11 @@ export const buildingScopeProperties: INodeProperties[] = [
 			scopeParameter: 'buildingSearchScope',
 			resource: 'measurementValue',
 			operations: ['getAll', 'getHistorical'],
+		},
+		{
+			scopeParameter: 'buildingSearchScope',
+			resource: 'floor',
+			operations: ['getAll', 'getById'],
 		},
 	].flatMap(({ scopeParameter, resource, operations }) => {
 		const show = { resource: [resource], operation: operations };

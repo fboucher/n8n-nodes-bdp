@@ -161,16 +161,31 @@ test('n8n retains the selected building list and locator scopes and their parent
 		{ resource: 'building', operation: 'getAll', scope: 'site', siteId: { mode: 'id', value: 's-1' } },
 		{ resource: 'building', operation: 'getById', buildingSearchScope: 'site', siteId: { mode: 'id', value: 's-1' }, buildingId: { mode: 'id', value: 'b-1' } },
 		{ resource: 'measurementValue', operation: 'getAll', buildingSearchScope: 'organization', organizationId: { mode: 'id', value: 'o-1' }, buildingId: { mode: 'id', value: 'b-1' } },
+		{ resource: 'floor', operation: 'getAll', buildingSearchScope: 'site', siteId: { mode: 'id', value: 's-1' }, buildingId: { mode: 'list', value: 'b-1' }, name: 'Ground', referenceId: 'ref', metadata: 'key=value', spaceCount: 0, measurementCount: 2, orderBy: 'NameAscending', returnAll: false, limit: 4 },
+		{ resource: 'floor', operation: 'getById', buildingSearchScope: 'organization', organizationId: { mode: 'id', value: 'o-1' }, buildingId: { mode: 'id', value: 'b-1' }, floorId: { mode: 'list', value: 'f-1' } },
+		{ resource: 'floor', operation: 'getById', floorId: { mode: 'id', value: 'f-1' } },
 	]) {
 		const node = { name: 'BDP', type: 'n8n-nodes-bdp.bdp', typeVersion: 1, position: [0, 0], parameters };
 		const workflow = new Workflow({
 			nodes: [node], connections: {}, active: false,
 			nodeTypes: { getByNameAndVersion: () => new Bdp() },
 		});
+
 		for (const [key, value] of Object.entries(parameters)) {
 			assert.deepEqual(workflow.nodes.BDP.parameters[key], value, `${parameters.resource} ${parameters.operation}: ${key}`);
 		}
 	}
+});
+
+test('Floor locator is searchable, supports manual IDs and refreshes when the building changes', () => {
+	const bdp = new Bdp();
+	const locator = bdp.description.properties.find(({ name }) => name === 'floorId');
+	assert.equal(locator.modes[0].typeOptions.searchListMethod, 'getFloors');
+	assert.equal(locator.modes[0].typeOptions.searchable, true);
+	assert.equal(locator.modes[1].type, 'string');
+	assert.notEqual(locator.noDataExpression, true);
+	assert.deepEqual(locator.typeOptions.loadOptionsDependsOn, ['buildingId.value']);
+	assert.equal(typeof bdp.methods.listSearch.getFloors, 'function');
 });
 
 test('list search paginates names and IDs under a resolved parent', async () => {

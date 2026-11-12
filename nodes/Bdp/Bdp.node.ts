@@ -40,6 +40,16 @@ import {
 	measurementResource,
 } from './resources/measurementPoint/properties';
 import { executeGraphql } from './resources/graphql/execute';
+import { executeFloor } from './resources/floor/execute';
+import { getFloors } from './resources/floor/listSearch';
+import {
+	floorBuildingResource,
+	floorFilters,
+	floorGetBuildingResource,
+	floorOperation,
+	floorPaginationProperties,
+	floorResource,
+} from './resources/floor/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
 	historyProperties,
@@ -53,6 +63,7 @@ const properties: INodeProperties[] = [
 	buildingOperation,
 	organizationOperation,
 	siteOperation,
+	floorOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
@@ -62,6 +73,9 @@ const properties: INodeProperties[] = [
 	siteOrganizationResource,
 	siteGetOrganizationResource,
 	siteResource,
+	floorBuildingResource,
+	floorGetBuildingResource,
+	floorResource,
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
@@ -69,8 +83,10 @@ const properties: INodeProperties[] = [
 	...measurementFilters,
 	...organizationFilters,
 	...siteFilters,
+	...floorFilters,
 	...historyProperties,
 	...paginationProperties,
+	...floorPaginationProperties,
 ];
 
 const resourceExecutors: Record<
@@ -80,6 +96,7 @@ const resourceExecutors: Record<
 	building: executeBuilding,
 	organization: executeOrganization,
 	site: executeSite,
+	floor: executeFloor,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -106,6 +123,7 @@ export class Bdp implements INodeType {
 			getBuildings,
 			getOrganizations,
 			getSites,
+			getFloors,
 			getMeasurementValues,
 		},
 	};
