@@ -2,7 +2,7 @@
 
 This is an n8n community node. It lets you read data from Schneider Electric EcoStruxure **Building Data Platform (BDP)** in your n8n workflows.
 
-Building Data Platform (BDP) exposes building, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access to both.
+Building Data Platform (BDP) exposes organization, site, building, floor, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access to both.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -21,13 +21,17 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Resource | Operations |
 | --- | --- |
 | Building | List, Get, Historical Values |
-
-Building **List** has a *Scope* option (All accessible, Within organization, Within site) and optional filters (reference ID, metadata, floor/space/measurement count, order by, include counts). Building **Get** accepts optional *Include Counts*. The building picker can be narrowed with *Building Picker Scope*. Defaults are unchanged.
-
+| Floor | List, Get |
 | Measurement Point | List, Historical Values |
+| Organization | List, Get |
+| Site | List, Get |
 | GraphQL | Execute Query (read-only) |
 
 All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
+
+Building List can target all accessible buildings, an organization, or a site, with optional server-side filters and counts. Building Get can also request counts; the Building selector can be narrowed to an organization or site.
+
+Floor List returns floors within a selected building, with optional name, reference ID, metadata, space-count, measurement-count, and ordering filters. Floor Get accepts a manual ID or a searchable selection scoped to the current building.
 
 ## Credentials
 

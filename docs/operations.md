@@ -4,9 +4,15 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |
-| Building | List | Lists all accessible native building records by default, following pagination; optional server-side name filter and optional Limit. |
-| Building | Get | Retrieves the full native record for one selected or manually entered building ID. |
+| Organization | List | Lists accessible native organization records; optional name, site-count, and ordering filters. |
+| Organization | Get | Retrieves the full native record for one selected or manually entered organization ID. |
+| Site | List | Lists accessible sites or sites within a selected organization; optional name, metadata, building-count, and ordering filters. |
+| Site | Get | Retrieves the full native record for one selected or manually entered site ID. |
+| Building | List | Lists all accessible buildings by default, or buildings within an organization or site; optional server-side filters, counts, ordering, and Limit. |
+| Building | Get | Retrieves the full native record for one selected or manually entered building ID, optionally including counts. |
 | Building | Historical Values | Reads building-wide history directly without enumerating points. |
+| Floor | List | Lists native floors within a selected building; optional name, reference ID, metadata, space-count, measurement-count, and ordering filters. |
+| Floor | Get | Retrieves the full native record for one selected or manually entered floor ID. |
 | Measurement Point | List | Lists points in a selected building; optional name, ontology-type, and unit filters. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 
@@ -14,7 +20,7 @@ For GraphQL queries, see [GraphQL](graphql.md).
 
 ## Pagination and limits
 
-Building List defaults to **Return All**, so it follows pagination to list all accessible buildings. Turn Return All off to apply its optional Limit (default 100). Other list and historical operations retain their 100-record Limit default with an explicit **Return All** option.
+Building List defaults to **Return All**, so it follows pagination to list all accessible buildings. Turn Return All off to apply its optional Limit (default 100). Organization, Site, and other list and historical operations retain their 100-record Limit default with an explicit **Return All** option.
 
 Each API page requests no more than 5,000 records. Results preserve the API's native fields and value types and are returned as individually linked n8n items; empty results produce zero items.
 
@@ -36,9 +42,13 @@ A minimal building-list configuration. Bind your own BDP credential and select i
 }
 ```
 
-Use Building **Get** when you need the full details for one building ID; **List** calls the collection endpoint and returns each accessible building separately.
+Organization and Site **List** can return all accessible records or narrow sites to an organization. Use **Get** when you need the full details for one organization, site, or building ID; **List** calls the collection endpoint and returns each accessible record separately.
+
+Building **List** supports name, reference ID, metadata, floor count, space count, measurement count, and ordering filters. Enable **Include Counts** to request counts on List or Get; it is omitted by default. For Building Get, Historical Values, and the Measurement Point building selector, **Building Search Scope** can narrow the selector to an organization or site without changing the selected building's ID or detail endpoint.
 
 Importable sanitized workflows for scheduled point history and direct building history are in [`examples/`](../examples/).
+
+Floor **List** requires a Building and calls `GET /api/Buildings/{buildingId}/Floors`. It defaults to a 100-record Limit and supports **Return All**. Floor **Get** calls `GET /api/Floors/{floorId}`. Select a Building to search its floors by name, or enter a Floor ID directly without a building. Floor searches always use the currently selected building, including after changing it. The Building selector also supports **Building Search Scope**.
 
 ## Out of scope
 
