@@ -24,6 +24,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Data Set | List, Get |
 | Device | List, Get |
 | Device Group | List, Get |
+| Event Hub | List, Get |
 | Floor | List, Get |
 | Measurement Point | List, Historical Values |
 | Organization | List, Get |
@@ -47,6 +48,8 @@ Device List has a Scope of In building, On floor, In space, or From source, show
 Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the GetOnDemand and SetOnDemand endpoints are not supported.
 
 Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. This resource is strictly read-only: create, update, and delete are not supported.
+
+Event Hub List returns the event hubs configured for your application, with optional name and ordering filters; Event Hub Get accepts a manual ID or a searchable selection. This resource is strictly read-only (the PATCH endpoint is not supported). Because the response schema was not available when this was built, any field whose name looks like a credential (connection string, key, secret, token, password, SAS) is returned as `[REDACTED]`; see [REST operations](docs/operations.md).
 
 ## Credentials
 
