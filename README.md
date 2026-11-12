@@ -21,6 +21,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Resource | Operations |
 | --- | --- |
 | Building | List, Get, Historical Values |
+| Device | List, Get |
 | Floor | List, Get |
 | Measurement Point | List, Historical Values |
 | Organization | List, Get |
@@ -38,6 +39,8 @@ Floor List returns floors within a selected building, with optional name, refere
 Space List returns spaces either **In building** or **On floor**, showing only the relevant parent selector, with optional name, reference ID, metadata, ontology type, measurement-count, Commissioned Status, and ordering filters. Space Get accepts a manual ID or a searchable selection scoped to the chosen building or floor.
 
 Source List returns the integration sources accessible to you, with optional type, name, and ordering filters; Source Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the on-demand command endpoint is not supported.
+
+Device List has a Scope of In building, On floor, In space, or From source, showing only the relevant parent selector, with optional name, metadata, reference ID, ontology type, product type, vendor identifier, Commissioned Status, and ordering filters. Device Get accepts a manual ID or a searchable selection scoped to the chosen parent.
 
 ## Credentials
 

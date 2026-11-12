@@ -68,6 +68,16 @@ import {
 	sourcePaginationProperties,
 	sourceResource,
 } from './resources/source/properties';
+import { executeDevice } from './resources/device/execute';
+import { getDevices } from './resources/device/listSearch';
+import {
+	deviceCommissionedStatus,
+	deviceFilters,
+	deviceOperation,
+	devicePaginationProperties,
+	deviceResource,
+	deviceScopeProperties,
+} from './resources/device/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
 	historyProperties,
@@ -84,6 +94,7 @@ const properties: INodeProperties[] = [
 	floorOperation,
 	spaceOperation,
 	sourceOperation,
+	deviceOperation,
 	measurementOperation,
 	graphqlOperation,
 	...graphqlProperties,
@@ -99,6 +110,8 @@ const properties: INodeProperties[] = [
 	...spaceScopeProperties,
 	spaceResource,
 	sourceResource,
+	...deviceScopeProperties,
+	deviceResource,
 	measurementBuildingResource,
 	measurementResource,
 	nameFilter,
@@ -110,11 +123,14 @@ const properties: INodeProperties[] = [
 	...spaceFilters,
 	spaceCommissionedStatus,
 	...sourceFilters,
+	...deviceFilters,
+	deviceCommissionedStatus,
 	...historyProperties,
 	...paginationProperties,
 	...floorPaginationProperties,
 	...spacePaginationProperties,
 	...sourcePaginationProperties,
+	...devicePaginationProperties,
 ];
 
 const resourceExecutors: Record<
@@ -127,6 +143,7 @@ const resourceExecutors: Record<
 	floor: executeFloor,
 	space: executeSpace,
 	source: executeSource,
+	device: executeDevice,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
 };
@@ -156,6 +173,7 @@ export class Bdp implements INodeType {
 			getFloors,
 			getSpaces,
 			getSources,
+			getDevices,
 			getMeasurementValues,
 		},
 	};
