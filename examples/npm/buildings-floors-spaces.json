@@ -1,0 +1,94 @@
+{
+  "name": "BDP buildings, floors and spaces",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "hierarchy-manual",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 340]
+    },
+    {
+      "parameters": {
+        "resource": "building",
+        "operation": "getAll",
+        "scope": "all",
+        "returnAllBuildings": true
+      },
+      "id": "hierarchy-buildings",
+      "name": "List Buildings",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [480, 340]
+    },
+    {
+      "parameters": {
+        "resource": "floor",
+        "operation": "getAll",
+        "buildingId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "returnAll": true
+      },
+      "id": "hierarchy-floors",
+      "name": "List Floors",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [720, 340]
+    },
+    {
+      "parameters": {
+        "resource": "space",
+        "operation": "getAll",
+        "spaceScope": "building",
+        "buildingId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "returnAll": true
+      },
+      "id": "hierarchy-spaces",
+      "name": "List Spaces",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [720, 560]
+    },
+    {
+      "parameters": {
+        "content": "## Buildings, floors and rooms\n\nBDP calls rooms **Spaces**. Run manually to list accessible buildings, then list floors and spaces separately for each building. Listing spaces by building also includes spaces that may not be assigned to a floor. Each node emits native records; item linking connects floors and spaces back to their building.",
+        "height": 250,
+        "width": 440
+      },
+      "id": "hierarchy-overview",
+      "name": "What This Does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "content": "## Before running\n\n1. In **each** Building Data Platform node, select your BDP Community OAuth2 API credential and environment.\n2. **List Buildings**: Resource = Building, Operation = List, Scope = All Accessible, Return All = on. You can instead select an organization or site and its ID.\n3. **List Floors**: Resource = Floor, Operation = List, Building = By ID with expression `{{ $json.id }}`, Return All = on.\n4. **List Spaces**: Resource = Space, Operation = List, Scope = In Building, Building = By ID with expression `{{ $json.id }}`, Return All = on.\n\nBoth expressions are already configured and use each preceding building's ID; do not replace them with a fixed ID. Inspect each node's output separately.",
+        "height": 380,
+        "width": 740
+      },
+      "id": "hierarchy-setup",
+      "name": "Configure Nodes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [720, -100]
+    }
+  ],
+  "connections": {
+    "Run Manually": { "main": [[{ "node": "List Buildings", "type": "main", "index": 0 }]] },
+    "List Buildings": { "main": [[
+      { "node": "List Floors", "type": "main", "index": 0 },
+      { "node": "List Spaces", "type": "main", "index": 0 }
+    ]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "BDP building history for the last three days",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "history-three-days-manual",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 340]
+    },
+    {
+      "parameters": {
+        "resource": "building",
+        "operation": "getHistorical",
+        "buildingId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "start": "={{ $now.minus({ days: 3 }).toUTC().toISO() }}",
+        "end": "={{ $now.toUTC().toISO() }}",
+        "returnAll": true
+      },
+      "id": "history-three-days-building",
+      "name": "Read Building History",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [500, 340]
+    },
+    {
+      "parameters": {
+        "content": "## Last three days of building history\n\nRun manually to read historical values for one building, from three days before execution until now. Results are native records, one n8n item per value, and all pages are requested. BDP determines whether the time boundaries are inclusive.",
+        "height": 200,
+        "width": 500
+      },
+      "id": "history-three-days-overview",
+      "name": "What This Does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 20]
+    },
+    {
+      "parameters": {
+        "content": "## Before running\n\nOpen **Read Building History**:\n1. Select your BDP Community OAuth2 API credential and environment.\n2. Select Resource = Building and Operation = Historical Values.\n3. Select a building from the list, or switch to By ID and enter its ID. Optionally narrow Building Search Scope to an organization or site.\n4. Keep Start = `{{ $now.minus({ days: 3 }).toUTC().toISO() }}`, End = `{{ $now.toUTC().toISO() }}`, and Return All = on.\n\nThe time expressions are already configured. Runs are not snapshots or exactly-once reads.",
+        "height": 340,
+        "width": 600
+      },
+      "id": "history-three-days-setup",
+      "name": "Configure Node",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [780, -80]
+    }
+  ],
+  "connections": {
+    "Run Manually": { "main": [[{ "node": "Read Building History", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

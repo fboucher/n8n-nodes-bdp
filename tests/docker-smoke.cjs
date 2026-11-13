@@ -71,8 +71,8 @@ async function main() {
 					`cp -r /tmp/bdp-tests ${installed}/tests && ` +
 					`node --test ${installed}/tests/*.test.cjs && ` +
 					`node ${installed}/tests/docker-oauth.cjs && ` +
-					`n8n import:workflow --input=${installed}/examples/graphql-nested-query.json && ` +
-					`n8n import:workflow --input=${installed}/examples/graphql-two-pages.json && ` +
+					`n8n import:workflow --input=${installed}/examples/npm/buildings-floors-spaces.json && ` +
+					`n8n import:workflow --input=${installed}/examples/npm/building-history-three-days.json && ` +
 					`n8n start`,
 			],
 			{ quiet: true },

@@ -1,0 +1,74 @@
+{
+  "name": "BDP daily measurement point history (template)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "bdp-schedule",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "measurementValue",
+        "operation": "getHistorical",
+        "measurementId": {
+          "__rl": true,
+          "mode": "id",
+          "value": ""
+        },
+        "start": "={{$now.minus({days: 1}).toISO()}}",
+        "end": "={{$now.toISO()}}",
+        "returnAll": true
+      },
+      "id": "bdp-point-history",
+      "name": "Read Previous 24 Hours",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {},
+      "id": "bdp-downstream",
+      "name": "Use Native Records",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Daily measurement point history\n\nOpen **Read Previous 24 Hours** and select your BDP Community OAuth2 API credential. Select Resource = Measurement Point, Operation = Historical Values, and enter a Measurement Point ID using By ID. Alternatively, select its parent scope and parent to search for a point. Keep Start and End as the configured expressions and Return All on.\n\nThe Daily Schedule runs once per day after you activate the workflow. Each run reads the preceding 24 hours. Adjust the schedule as needed. Runs are not snapshots or exactly-once reads; account for gaps or overlaps when deduplicating results.",
+        "height": 300,
+        "width": 700
+      },
+      "id": "bdp-point-guide",
+      "name": "Setup and Limits",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 40]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [[{ "node": "Read Previous 24 Hours", "type": "main", "index": 0 }]]
+    },
+    "Read Previous 24 Hours": {
+      "main": [[{ "node": "Use Native Records", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-4000-8000-000000000001"
+}
