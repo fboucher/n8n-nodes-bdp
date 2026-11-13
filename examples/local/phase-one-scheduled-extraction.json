@@ -1,5 +1,5 @@
 {
-  "name": "BDP daily building history (template)",
+  "name": "BDP daily measurement point history (template)",
   "nodes": [
     {
       "parameters": {
@@ -12,7 +12,7 @@
           ]
         }
       },
-      "id": "bdp-building-schedule",
+      "id": "bdp-schedule",
       "name": "Daily Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -20,30 +20,26 @@
     },
     {
       "parameters": {
-        "resource": "building",
+        "resource": "measurementValue",
         "operation": "getHistorical",
-        "buildingId": {
+        "measurementId": {
+          "__rl": true,
           "mode": "id",
-          "value": "REPLACE_WITH_BUILDING_ID"
+          "value": ""
         },
         "start": "={{$now.minus({days: 1}).toISO()}}",
         "end": "={{$now.toISO()}}",
         "returnAll": true
       },
-      "id": "bdp-building-history",
+      "id": "bdp-point-history",
       "name": "Read Previous 24 Hours",
-      "type": "n8n-nodes-bdp.bdp",
+      "type": "CUSTOM.bdp",
       "typeVersion": 1,
-      "position": [480, 300],
-      "credentials": {
-        "bdpOAuth2Api": {
-          "name": "Bind your BDP credential"
-        }
-      }
+      "position": [480, 300]
     },
     {
       "parameters": {},
-      "id": "bdp-building-downstream",
+      "id": "bdp-downstream",
       "name": "Use Native Records",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
@@ -51,11 +47,11 @@
     },
     {
       "parameters": {
-        "content": "Before activating: bind a BDP Community OAuth2 API credential and replace the building ID. This template reads the previous 24 hours once per day and returns all pages. Confirm access to the selected building. Scheduled runs are not snapshots or exactly-once reads; account for overlaps or gaps if your workflow requires deduplication.",
-        "height": 200,
-        "width": 620
+        "content": "## Daily measurement point history\n\nOpen **Read Previous 24 Hours** and select your BDP Community OAuth2 API credential. Select Resource = Measurement Point, Operation = Historical Values, and enter a Measurement Point ID using By ID. Alternatively, select its parent scope and parent to search for a point. Keep Start and End as the configured expressions and Return All on.\n\nThe Daily Schedule runs once per day after you activate the workflow. Each run reads the preceding 24 hours. Adjust the schedule as needed. Runs are not snapshots or exactly-once reads; account for gaps or overlaps when deduplicating results.",
+        "height": 300,
+        "width": 700
       },
-      "id": "bdp-building-guide",
+      "id": "bdp-point-guide",
       "name": "Setup and Limits",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -74,5 +70,5 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "00000000-0000-4000-8000-000000000002"
+  "versionId": "00000000-0000-4000-8000-000000000001"
 }

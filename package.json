@@ -36,7 +36,9 @@
 	"files": [
 		"dist",
 		"!dist/**/*.tsbuildinfo",
-		"examples"
+		"examples/local",
+		"examples/npm",
+		"examples/README.md"
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,

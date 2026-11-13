@@ -54,9 +54,6 @@ Local validation and permanent application/authentication errors are not retried
 
 There is no automatic pagination, injected `take`/`skip`, query rewriting, metadata request, or hidden result cap. Every root and nested collection needs its own bounds and, when needed, its own workflow paging strategy. Server depth, complexity, permission, and response-size limits still apply and may vary by environment; use small bounds and reduce query breadth/depth when denied.
 
-- [`examples/graphql-two-pages.json`](../examples/graphql-two-pages.json) uses a Loop Over Items node to execute two page inputs, `{ "take": 2, "skip": 0 }` and `{ "take": 2, "skip": 2 }`. It demonstrates two pages of the buildings collection only, not a Return All operation or a completeness guarantee.
-- [`examples/graphql-nested-query.json`](../examples/graphql-nested-query.json) is a bounded building → equipment → points template with a synthetic UUID and separate collection bounds. Replace the ID and confirm the `UUID` scalar, relationships, point fields, and nested `take` support before executing. It also contains a second named query to demonstrate operation selection.
-
 Execution is stateless: requests are not snapshots, checkpoints, managed synchronization, or exactly-once reads. Point values are current context; GraphQL historical retrieval and subscriptions are not supported. REST measurement IDs and GraphQL point IDs are not assumed interchangeable.
 
 ## Parser

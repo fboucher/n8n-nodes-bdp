@@ -63,7 +63,7 @@ Organization and Site **List** can return all accessible records or narrow sites
 
 Building **List** supports name, reference ID, metadata, floor count, space count, measurement count, and ordering filters. Enable **Include Counts** to request counts on List or Get; it is omitted by default. For Building Get, Historical Values, and the Measurement Point building selector, **Building Search Scope** can narrow the selector to an organization or site without changing the selected building's ID or detail endpoint.
 
-Importable sanitized workflows for scheduled point history and direct building history are in [`examples/`](../examples/).
+Importable workflows for scheduled point history and direct building history are in [`examples/`](../examples/README.md).
 
 Floor **List** requires a Building and calls `GET /api/Buildings/{buildingId}/Floors`. It defaults to a 100-record Limit and supports **Return All**. Floor **Get** calls `GET /api/Floors/{floorId}`. Select a Building to search its floors by name, or enter a Floor ID directly without a building. Floor searches always use the currently selected building, including after changing it. The Building selector also supports **Building Search Scope**.
 

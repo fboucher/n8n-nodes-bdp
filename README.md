@@ -66,7 +66,7 @@ Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, 
 
 ## Usage
 
-Sample workflows for scheduled point history, building history, and GraphQL paging are in [`examples/`](examples/).
+Import an [example workflow](examples/README.md) to list buildings, floors, and spaces (rooms), read building history, or schedule history reads. Choose the **local** or **npm** folder to match your installation; each workflow's sticky notes explain its setup.
 
 Having trouble? See [Troubleshooting](docs/troubleshooting.md).
 
