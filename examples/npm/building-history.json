@@ -1,0 +1,74 @@
+{
+  "name": "BDP daily building history (template)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "bdp-building-schedule",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "building",
+        "operation": "getHistorical",
+        "buildingId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "start": "={{$now.minus({days: 1}).toISO()}}",
+        "end": "={{$now.toISO()}}",
+        "returnAll": true
+      },
+      "id": "bdp-building-history",
+      "name": "Read Previous 24 Hours",
+      "type": "n8n-nodes-bdp.bdp",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {},
+      "id": "bdp-building-downstream",
+      "name": "Use Native Records",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Daily building history\n\nOpen **Read Previous 24 Hours** and select your BDP Community OAuth2 API credential. Select Resource = Building, Operation = Historical Values, and choose a Building from the list (or enter its ID). Keep Start and End as the configured expressions and Return All on.\n\nThe Daily Schedule runs once per day after you activate the workflow. Each run reads the preceding 24 hours. Adjust the schedule as needed. Runs are not snapshots or exactly-once reads; account for gaps or overlaps when deduplicating results.",
+        "height": 280,
+        "width": 660
+      },
+      "id": "bdp-building-guide",
+      "name": "Setup and Limits",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 40]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [[{ "node": "Read Previous 24 Hours", "type": "main", "index": 0 }]]
+    },
+    "Read Previous 24 Hours": {
+      "main": [[{ "node": "Use Native Records", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "00000000-0000-4000-8000-000000000002"
+}

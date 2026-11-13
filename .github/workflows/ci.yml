@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   # Temporary disabled triggers for pull_request and push to main branch
   # pull_request:
   # push:

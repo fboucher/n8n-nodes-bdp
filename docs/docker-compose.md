@@ -20,15 +20,9 @@ The included [`compose.yml`](../compose.yml) runs a standalone n8n **2.44.4** in
 
 4. Create a **BDP Community OAuth2 API** credential inside n8n using your administrator-provided tenant ID, client ID, client secret, scope, and environment. For **GraphQL → Execute Query**, confirm GraphQL permission and fields in your environment's explorer. Credentials are not included in the repository; do not put them in Compose, source files, or Git.
 
-5. To try the GraphQL examples, first prepare local copies for this custom-extension installation:
+5. In n8n, use **Import from File** and select a workflow from [`examples/local/`](../examples/local/). Follow its sticky notes to select your credential and configure the nodes. No npm publication or conversion step is needed.
 
-   ```sh
-   node -e "const fs = require('node:fs'); fs.mkdirSync('.local/workflows', { recursive: true }); for (const name of ['graphql-nested-query.json', 'graphql-two-pages.json']) { const workflow = JSON.parse(fs.readFileSync('examples/' + name, 'utf8')); for (const node of workflow.nodes) { if (node.type === 'n8n-nodes-bdp.bdp') node.type = 'CUSTOM.bdp'; } fs.writeFileSync('.local/workflows/' + name, JSON.stringify(workflow, null, 2)); }"
-   ```
-
-   In n8n, use **Import from File** and select a generated file from `.local/workflows` in the checkout. Bind your credential and replace its synthetic IDs/query fields as needed. The GraphQL examples document their bounds and limitations in sticky notes. They are templates, not evidence that your environment supports every example field.
-
-   n8n identifies bind-mounted custom nodes as `CUSTOM.bdp`, while a normally installed community package uses `n8n-nodes-bdp.bdp`. The command changes only the node type in ignored local copies; original public examples stay appropriate for package installations. Apply the same node-type adjustment to other imported workflows, or add a new Building Data Platform node through the editor.
+   The [npm examples](../examples/npm/) use a different node identifier and are for an installed community package.
 
 The project-scoped Docker volume `n8n-bdp-dev_n8n-data` stores workflows, credentials, the encryption key, and the owner account across restarts. This is a **separate instance** from an existing setup such as `C:\dev\n8n`; existing credentials/workflows are not automatically copied. Keep the volume private and back it up before upgrades. Do not use `docker compose down --volumes` unless you deliberately want to delete that instance's data.
 

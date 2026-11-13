@@ -1,0 +1,66 @@
+{
+	"nodes": [
+		{
+			"parameters": {},
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [-160, 0],
+			"id": "67ff088e-e8f8-4e35-8d66-6f36856d216f",
+			"name": "When clicking ‘Execute workflow’"
+		},
+		{
+			"parameters": {
+				"resource": "graphql",
+				"query": "=query {\n  buildings(take: 10, skip: 0, where: { name: { contains: \"{{ $json.value }}\" } }) {\n    id\n    name\n    metadata {\n      name\n      value\n    }\n    rooms{\n      name\n    }\n  }\n}"
+			},
+			"type": "CUSTOM.bdp",
+			"typeVersion": 1,
+			"position": [80, 0],
+			"id": "ade15e76-b31f-47aa-b0c5-cfcae2592379",
+			"name": "Execute a read only query",
+			"credentials": {
+				"bdpOAuth2Api": {
+					"id": "UIQSUalZ1GXTwNOw",
+					"name": "BDP frank"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"content": "## What it does\n\nThis workflow will list the building where the name contains the value of the parameter search. Fetching the Building ID, Name, Metadate, and Room name from in those building. \n\nUsing a Execute Query BDP node and a GraphQL query and a \n\n  \n  \n  \n  \n  \n\"name\"",
+				"height": 192,
+				"width": 512
+			},
+			"type": "n8n-nodes-base.stickyNote",
+			"position": [-160, -240],
+			"typeVersion": 1,
+			"id": "2c010d69-1804-4640-ab52-b96a349e37cc",
+			"name": "Sticky Note"
+		}
+	],
+	"connections": {
+		"When clicking ‘Execute workflow’": {
+			"main": [
+				[
+					{
+						"node": "Execute a read only query",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"pinData": {
+		"When clicking ‘Execute workflow’": [
+			{
+				"name": "searchFor",
+				"value": "FB"
+			}
+		]
+	},
+	"meta": {
+		"templateCredsSetupCompleted": true,
+		"instanceId": "a18e6a33f1474fd50a97ce594ca14d42b0b0153940be9639ff271ac2302a10f3"
+	}
+}

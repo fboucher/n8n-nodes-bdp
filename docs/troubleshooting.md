@@ -1,9 +1,9 @@
 # Troubleshooting
 
 - **Authentication failed:** verify the tenant ID, client ID, client secret, and application scope with your Building Data Platform (BDP) administrator.
-- **Access denied:** verify that the application has permission to access the selected environment and requested building.
-- **No results:** an empty list is valid; check the building selection, filters, access scope, and time window.
-- **Selector search fails:** choose a resolved building before searching measurement points, or enter an ID manually. Unresolved expressions are not used to issue unrelated searches.
+- **Access denied:** verify that the application has permission to access the selected environment and requested organization, site, or building.
+- **No results:** an empty list is valid; check the organization or building selection, filters, access scope, and time window.
+- **Selector search fails:** choose a resolved organization when listing sites within an organization, or a resolved building before searching measurement points. Unresolved expressions are not used to issue unrelated searches; you can also enter an ID manually.
 - **GraphQL validation error:** inspect the returned message/code/location/path and confirm the field, scalar types, and permissions in your environment's explorer. HTTP 200 does not mean a query succeeded.
 - **GraphQL invalid envelope/content type:** check the environment's API response and proxy configuration. Batch arrays, multipart incremental responses, HTML, and missing/object-less success data are not accepted.
 

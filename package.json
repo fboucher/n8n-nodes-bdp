@@ -36,7 +36,9 @@
 	"files": [
 		"dist",
 		"!dist/**/*.tsbuildinfo",
-		"examples"
+		"examples/local",
+		"examples/npm",
+		"examples/README.md"
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,
@@ -50,10 +52,10 @@
 	},
 	"devDependencies": {
 		"@n8n/node-cli": "^1.1.0",
-		"eslint": "10.14.0",
+		"eslint": "9.29.0",
 		"prettier": "3.9.10",
 		"release-it": "21.1.2",
-		"typescript": "7.0.2"
+		"typescript": "5.9.3"
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
