@@ -80,7 +80,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 'lts/*'
+          # Pinned (not 'lts/*'): Node 26 broke the native build of isolated-vm,
+          # a dependency pulled in by n8n-workflow, so `npm ci` failed.
+          # Keep this in sync with ci.yml.
+          node-version: '24.18.0'
           cache: 'npm'
 
       - name: Install dependencies
