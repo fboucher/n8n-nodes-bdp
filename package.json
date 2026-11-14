@@ -65,6 +65,6 @@
 		"n8n-workflow": "*"
 	},
 	"dependencies": {
-		"graphql": "^16.15.0"
+		"graphql": "^17.1.0"
 	}
 }
