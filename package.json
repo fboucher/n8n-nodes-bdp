@@ -1,7 +1,7 @@
 {
-	"name": "n8n-nodes-bdp",
+	"name": "n8n-nodes-bdp-beta",
 	"version": "0.1.0",
-	"description": "Read-only EcoStruxure Building Data Platform nodes for n8n",
+	"description": "Beta version of the official EcoStruxure Building Data Platform nodes for n8n",
 	"license": "MIT",
 	"homepage": "https://github.com/fboucher/n8n-nodes-bdp#readme",
 	"keywords": [
@@ -9,11 +9,15 @@
 		"n8n",
 		"schneider-electric",
 		"building-data-platform",
-		"bdp"
+		"bdp",
+		"smart-building",
+		"iot",
+		"energy-management",
+		"building-automation"
 	],
 	"author": {
-		"name": "BDP Community Node Maintainers",
-		"email": "noreply@github.com"
+		"name": "Frank Boucher",
+		"email": "frank.boucher@se.com"
 	},
 	"repository": {
 		"type": "git",
