@@ -145,7 +145,9 @@ test('Historical Values is a consistent per-resource operation with the right se
 	const props = new Bdp().description.properties;
 	for (const [resource, parameter] of resources) {
 		const operation = props.find((p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes(resource));
-		assert.deepEqual(operation.options.map(({ value }) => value), ['getAll', 'getById', 'getHistorical']);
+		// Write and on-demand operations are covered by their own tests; this checks the read set.
+		const readOperations = operation.options.map(({ value }) => value).filter((value) => !['getOnDemand', 'setOnDemand'].includes(value));
+		assert.deepEqual(readOperations, ['getAll', 'getById', 'getHistorical']);
 		const shows = (name) => props.some((p) => p.name === name && (!p.displayOptions?.show?.resource || p.displayOptions.show.resource.includes(resource)) &&
 			p.displayOptions.show.operation?.includes('getHistorical'));
 		assert.ok(shows(parameter), `${resource}: ${parameter} locator is shown for Historical Values`);

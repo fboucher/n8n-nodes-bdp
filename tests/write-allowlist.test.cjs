@@ -16,6 +16,9 @@ const EXPECTED_WRITES = [
 	{ resource: 'dataSet', operation: 'update', method: 'PATCH', path: '/api/DataSets/ds-1' },
 	{ resource: 'dataSet', operation: 'delete', method: 'DELETE', path: '/api/DataSets/ds-1' },
 	{ resource: 'eventHub', operation: 'update', method: 'PATCH', path: '/api/EventHubs/eh-1' },
+	{ resource: 'deviceGroup', operation: 'setOnDemand', method: 'POST', path: '/api/DeviceGroups/g-1/SetOnDemand' },
+	{ resource: 'deviceGroup', operation: 'getOnDemand', method: 'POST', path: '/api/DeviceGroups/g-1/GetOnDemand' },
+	{ resource: 'source', operation: 'runOnDemand', method: 'POST', path: '/api/Sources/s-1/OnDemand/Refresh' },
 ];
 
 const matches = (spec, request) =>

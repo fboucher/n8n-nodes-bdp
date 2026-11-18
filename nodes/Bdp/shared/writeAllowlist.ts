@@ -67,6 +67,28 @@ export const WRITE_ALLOWLIST: readonly WriteOperationSpec[] = [
 		path: new RegExp(`^/api/EventHubs/${ID}$`),
 		idempotent: true,
 	},
+	// Device Group -> Set On Demand / Get On Demand; Source -> Run On Demand. None are retried.
+	{
+		resource: 'deviceGroup',
+		operation: 'setOnDemand',
+		method: 'POST',
+		path: new RegExp(`^/api/DeviceGroups/${ID}/SetOnDemand$`),
+		idempotent: false,
+	},
+	{
+		resource: 'deviceGroup',
+		operation: 'getOnDemand',
+		method: 'POST',
+		path: new RegExp(`^/api/DeviceGroups/${ID}/GetOnDemand$`),
+		idempotent: false,
+	},
+	{
+		resource: 'source',
+		operation: 'runOnDemand',
+		method: 'POST',
+		path: new RegExp(`^/api/Sources/${ID}/OnDemand/${ID}$`),
+		idempotent: false,
+	},
 ];
 
 export function findWriteOperation(

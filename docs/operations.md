@@ -25,6 +25,9 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Space | Historical Values | Reads history for a space via `GET /api/Spaces/{spaceId}/HistoricalValues`. |
 | Device | Historical Values | Reads history for a device via `GET /api/Devices/{deviceId}/HistoricalValues`. |
 | Device Group | Historical Values | Reads history for a device group via `GET /api/DeviceGroups/{deviceGroupId}/HistoricalValues`. |
+| Device Group | Get On Demand | **Reads live** values from the source system via `POST /api/DeviceGroups/{deviceGroupId}/GetOnDemand`. |
+| Device Group | Set On Demand | **Write.** Sends values to the real source system via `POST /api/DeviceGroups/{deviceGroupId}/SetOnDemand`. Can have physical effects. |
+| Source | Run On Demand | **Write.** Runs a source-specific command via `POST /api/Sources/{sourceId}/OnDemand/{methodName}`. Can have physical effects. |
 | Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
 | Data Set | Create | **Write.** Creates a data set via `POST /api/DataSets`. |
@@ -74,7 +77,7 @@ Floor **List** requires a Building and calls `GET /api/Buildings/{buildingId}/Fl
 
 Space **List** has a **Scope** of In building (`GET /api/Buildings/{buildingId}/Spaces`) or On floor (`GET /api/Floors/{floorId}/Spaces`). Only the selected scope's parent is shown; to search floors by name, also pick a Building, or enter a Floor ID directly. Space **Get** calls `GET /api/Spaces/{spaceId}`; its selector searches the chosen building or floor, and a manual ID needs no parent. Commissioned Status is a constrained option (Any, Commissioned, Decommissioned).
 
-Source **List** and **Get** only issue GET requests. `POST /api/Sources/{sourceId}/OnDemand/{methodName}` is deliberately out of scope and cannot be sent from this resource.
+Source **List** and **Get** only issue GET requests. **Run On Demand** is a separate operation described under [Write operations](#write-operations).
 
 Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devices`, `/api/Spaces/{id}/Devices`, or `/api/Sources/{id}/Devices` depending on **Scope**; only the selected scope's parent selector is shown. Device **Get** calls `GET /api/Devices/{deviceId}`; its selector searches the chosen parent, and a manual ID needs no parent.
 
@@ -121,6 +124,24 @@ Branch on `status` (for example with an IF node) to handle failed points. A `206
 **Batch size.** Inputs larger than 500 points are split into sequential requests of 500; they are never truncated. If a later request fails, the error says how many points were already sent. The 500-point chunk size is a conservative default; the API's real limit still has to be confirmed in UAT.
 
 **Errors.** `400` (unknown point, wrong value type, or point not writeable), `403`, `404`, `413`, `429`, and `504` each produce a short message with the status and no request body.
+
+### Device Group: Set On Demand and Get On Demand
+
+> **Warning: Set On Demand sends a command to the real source system and can have physical effects.** It bypasses stored measurement values and is the highest-risk operation in this node. Test on a designated test point first. It is **never retried automatically**, because a retry after an ambiguous failure (timeout, 504, dropped connection) could repeat a physical action; after such a failure, check the equipment before running it again.
+
+Both operations take **one input item per point** and send **one request per run** for the selected device group. Each item addresses its point with exactly one of **Point ID** or **Point Path** (use expressions to read them from the items); items with both or neither are rejected before any request. A point may appear only once per run, and runs are limited to 500 points: larger inputs are rejected, not truncated or split, so a physical write is never half-applied silently.
+
+**Set On Demand** (`POST /api/DeviceGroups/{deviceGroupId}/SetOnDemand`) sends `[{ "identity": { "id" | "path": ... }, "value": "<text>" }]`. Values are sent as text; numbers and booleans are converted. It returns one item per input item with `status` (`success`, `failed`, or `unconfirmed`), `statusCode`, and for failures `errorCode` and `error`. A `206 Partial Content` response keeps the successful items, marks the failed ones, and is never reported as full success.
+
+**Get On Demand** (`POST /api/DeviceGroups/{deviceGroupId}/GetOnDemand`) sends `[{ "id": ... } | { "path": ... }]` and returns one item per point exactly as BDP reports it (`identity`, `statusCode`, `value`, `timeStamp`, `metadata`), plus a `status` of `success` or `failed` (with `error`/`errorCode` from the metadata). Branch on `status` to handle failed points after a `206`.
+
+Errors: `400`, `403`, `404`, `429`, and `504` produce short messages with the HTTP status; request bodies are never echoed.
+
+### Source: Run On Demand
+
+> **Warning:** Run On Demand sends a command to the real source system and can have physical effects. It is never retried automatically.
+
+`POST /api/Sources/{sourceId}/OnDemand/{methodName}` runs a method on the selected source. **Method Name** is URL-encoded as a single path segment, and **Payload** is sent as JSON. **The payload structure depends on the source and method, and this node does not validate it**; consult the documentation for your source. The response is returned as BDP sent it (an object as is, anything else under `response`), or `{ status: "success" }` when BDP returns nothing. Errors `400`, `403`, `404`, `429`, and `504` produce short messages with the HTTP status and never echo the payload.
 
 ### Data Set: Create, Update, Delete
 

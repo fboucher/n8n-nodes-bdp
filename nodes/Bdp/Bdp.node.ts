@@ -72,6 +72,7 @@ import {
 	sourceOperation,
 	sourcePaginationProperties,
 	sourceResource,
+	sourceRunOnDemandProperties,
 } from './resources/source/properties';
 import { executeDevice } from './resources/device/execute';
 import { getDevices } from './resources/device/listSearch';
@@ -84,12 +85,17 @@ import {
 	deviceScopeProperties,
 } from './resources/device/properties';
 import { executeDeviceGroup } from './resources/deviceGroup/execute';
+import {
+	deviceGroupGetOnDemand,
+	deviceGroupSetOnDemand,
+} from './resources/deviceGroup/onDemand';
 import { getDeviceGroups } from './resources/deviceGroup/listSearch';
 import {
 	deviceGroupFilters,
 	deviceGroupOperation,
 	deviceGroupPaginationProperties,
 	deviceGroupResource,
+	deviceGroupOnDemandProperties,
 	deviceGroupScopeProperties,
 } from './resources/deviceGroup/properties';
 import { executeDataSet } from './resources/dataSet/execute';
@@ -145,10 +151,12 @@ const properties: INodeProperties[] = [
 	...spaceScopeProperties,
 	spaceResource,
 	sourceResource,
+	...sourceRunOnDemandProperties,
 	...deviceScopeProperties,
 	deviceResource,
 	...deviceGroupScopeProperties,
 	deviceGroupResource,
+	...deviceGroupOnDemandProperties,
 	dataSetResource,
 	...dataSetWriteProperties,
 	eventHubResource,
@@ -202,6 +210,8 @@ const resourceExecutors: Record<
 // Operations that run once over all input items (keyed `resource.operation`).
 const aggregateExecutors: Record<string, AggregateExecutor> = {
 	'measurementValue.update': measurementBatchUpdate,
+	'deviceGroup.setOnDemand': deviceGroupSetOnDemand,
+	'deviceGroup.getOnDemand': deviceGroupGetOnDemand,
 };
 
 export class Bdp implements INodeType {

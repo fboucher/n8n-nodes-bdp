@@ -4,7 +4,7 @@ This is an n8n community node. It lets you read data from, and write data to, Sc
 
 Building Data Platform (BDP) exposes organization, site, building, floor, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access through GraphQL and read access plus a small, explicit set of write operations through REST.
 
-> **Warning:** write operations change data in BDP and can reach physical equipment. There is no undo. Test on a designated test point first.
+> **Warning:** write operations change data in BDP and can reach physical equipment. There is no undo. Test on a designated test point first. **Set On Demand and Run On Demand send commands straight to the real source system and are the highest-risk operations; they are never retried automatically.**
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -25,13 +25,13 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Building | List, Get, Historical Values |
 | Data Set | List, Get, Create, Update, Delete |
 | Device | List, Get, Historical Values |
-| Device Group | List, Get, Historical Values |
+| Device Group | List, Get, Historical Values, Get On Demand, Set On Demand |
 | Event Hub | List, Get, Update |
 | Floor | List, Get, Historical Values |
 | Measurement Point | List, Get, Historical Values, Update |
 | Organization | List, Get |
 | Site | List, Get |
-| Source | List, Get |
+| Source | List, Get, Run On Demand |
 | Space | List, Get, Historical Values |
 | GraphQL | Execute Query (read-only) |
 
@@ -43,11 +43,11 @@ Floor List returns floors within a selected building, with optional name, refere
 
 Space List returns spaces either **In building** or **On floor**, showing only the relevant parent selector, with optional name, reference ID, metadata, ontology type, measurement-count, Commissioned Status, and ordering filters. Space Get accepts a manual ID or a searchable selection scoped to the chosen building or floor.
 
-Source List returns the integration sources accessible to you, with optional type, name, and ordering filters; Source Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the on-demand command endpoint is not supported.
+Source List returns the integration sources accessible to you, with optional type, name, and ordering filters; Source Get accepts a manual ID or a searchable selection. Source Run On Demand sends a command to the source system; see the warning below.
 
 Device List has a Scope of In building, On floor, In space, or From source, showing only the relevant parent selector, with optional name, metadata, reference ID, ontology type, product type, vendor identifier, Commissioned Status, and ordering filters. Device Get accepts a manual ID or a searchable selection scoped to the chosen parent.
 
-Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the GetOnDemand and SetOnDemand endpoints are not supported.
+Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. Device Group Get On Demand reads live values from the source system, and Set On Demand writes values to it; see the warning below.
 
 Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. Data Set Create, Update, and Delete are writes: Create needs a name, an expiry (ISO 8601 with an explicit offset) and members; Update changes any of name, expiry, or members (members are replaced as a whole); Delete cannot be undone. See [Write operations](docs/operations.md#write-operations).
 
