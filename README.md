@@ -1,8 +1,10 @@
 # n8n-nodes-bdp
 
-This is an n8n community node. It lets you read data from Schneider Electric EcoStruxure **Building Data Platform (BDP)** in your n8n workflows.
+This is an n8n community node. It lets you read data from, and write data to, Schneider Electric EcoStruxure **Building Data Platform (BDP)** in your n8n workflows.
 
-Building Data Platform (BDP) exposes organization, site, building, floor, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access to both.
+Building Data Platform (BDP) exposes organization, site, building, floor, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access through GraphQL and read access plus a small, explicit set of write operations through REST.
+
+> **Warning:** write operations change data in BDP and can reach physical equipment. There is no undo. Test on a designated test point first.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -26,14 +28,14 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Device Group | List, Get, Historical Values |
 | Event Hub | List, Get |
 | Floor | List, Get, Historical Values |
-| Measurement Point | List, Get, Historical Values |
+| Measurement Point | List, Get, Historical Values, Update |
 | Organization | List, Get |
 | Site | List, Get |
 | Source | List, Get |
 | Space | List, Get, Historical Values |
 | GraphQL | Execute Query (read-only) |
 
-All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
+List, Get, and Historical Values operations are read-only, and GraphQL stays read-only. Only the operations named in [Write operations](docs/operations.md#write-operations) send writes; subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
 
 Building List can target all accessible buildings, an organization, or a site, with optional server-side filters and counts. Building Get can also request counts; the Building selector can be narrowed to an organization or site.
 

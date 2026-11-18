@@ -1,6 +1,6 @@
 # REST operations
 
-The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). All operations are read-only.
+The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). List, Get, and Historical Values operations are read-only. The operations listed under [Write operations](#write-operations) are the only ones that send writes.
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |
@@ -32,6 +32,7 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Measurement Point | List | Lists points in a building (default), on a floor, in a space, on a device, in a device group, or in a data set; optional name, ontology-type, unit, reference ID, metadata, context, writeable, updated-after, commissioned status, and ordering filters. |
 | Measurement Point | Get | Retrieves one point via `GET /api/MeasurementValues/{measurementId}` by selected or manually entered ID. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
+| Measurement Point | Update | **Write.** Replaces the numeric value of one point (`PATCH /api/MeasurementValues/{measurementId}`) or of many points in a device group (`PATCH /api/DeviceGroups/{deviceGroupId}/MeasurementValues`). See [Write operations](#write-operations). |
 
 For GraphQL queries, see [GraphQL](graphql.md).
 
@@ -79,10 +80,44 @@ Data Set **List** and **Get** only issue GET requests; create, update, and delet
 
 Event Hub **List** and **Get** only issue GET requests; the PATCH endpoint is deliberately out of scope. **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
 
-Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. PATCH endpoints are out of scope.
+Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. List, Get and Historical Values never write; see Update under [Write operations](#write-operations).
 
 **Historical Values design:** history is an operation on each parent resource (Building, Floor, Space, Device, Device Group, Measurement Point), not a scope of another operation. Select the parent (its selector can be narrowed as for Get), then enter Start and End. They use the same strict ISO 8601 validation with seconds and an explicit UTC offset or Z, UTC normalization, ascending order, Start earlier than End, Return All / Limit, retries, and later-page failure handling as Building history. Existing Building and Measurement Point history are unchanged.
 
+## Write operations
+
+> **Warning: writes can reach physical equipment.** BDP forwards some values to real building systems, and there is no undo. Test on a designated test point or test data first, and use the node's **Continue On Fail** deliberately.
+
+Writes are explicit operations (Update, Create, Delete, Send). No write is reachable from a List, Get, or Historical Values operation, and the GraphQL resource stays read-only. Every write goes through one allowlisted code path (see [Development](development.md#write-operations)).
+
+Common rules:
+
+- **No automatic retry.** A write that fails with a transient error (429, 5xx, a network error) is reported once and is not repeated, because the first attempt may have taken effect. Check the target, then re-run deliberately.
+- **Safe errors.** Messages state the HTTP status and what to check. They never include credentials, tokens, or the request body.
+- **Validation first.** Inputs are validated before any credential lookup or request.
+
+### Measurement Point: Update
+
+Replaces the numeric `value` of a measurement point. Nothing else can be changed, and measurement points cannot be deleted through this operation. The point must be writeable; the **Only Writeable Points** option (on by default) limits the selector to points that accept writes (`isWriteable`).
+
+**Single mode** writes one value per input item: pick the point (From list or By ID, optionally narrowed by a search scope) and enter the value. It sends one `PATCH /api/MeasurementValues/{measurementId}` with `[{"op":"replace","path":"/value","value":<number>}]` and returns `{ measurementId, value, status: "success", statusCode: 204 }`.
+
+**Batch mode** takes one input item per point and sends one `PATCH /api/DeviceGroups/{deviceGroupId}/MeasurementValues` for the device group. Set **Measurement ID** (a UUID) and **Value** (a number) per item; by default they read `$json.measurementId` and `$json.value`. All items must use the same device group, and a point may appear only once. Every ID and value is validated before the first request.
+
+Batch output has one item per input item, linked to it, with a `status`:
+
+| status | Meaning |
+| --- | --- |
+| `success` | BDP accepted the point (200 or 204, or a 206 that did not list it as failed). |
+| `failed` | BDP returned a per-point error in a `206 Partial Content` response. Includes `statusCode`, `errorCode` (when given), and `error`. Other points in the same request were still applied. |
+| `unconfirmed` | BDP returned `206` without usable per-point details. Verify these points. |
+
+Branch on `status` (for example with an IF node) to handle failed points. A `206` is never reported as full success.
+
+**Batch size.** Inputs larger than 500 points are split into sequential requests of 500; they are never truncated. If a later request fails, the error says how many points were already sent. The 500-point chunk size is a conservative default; the API's real limit still has to be confirmed in UAT.
+
+**Errors.** `400` (unknown point, wrong value type, or point not writeable), `403`, `404`, `413`, `429`, and `504` each produce a short message with the status and no request body.
+
 ## Out of scope
 
-The node does not provide generic HTTP requests, writes, commands, subscriptions, enrichment, cursors, or exactly-once guarantees.
+The node does not provide generic HTTP requests, GraphQL mutations, subscriptions, enrichment, cursors, or exactly-once guarantees.

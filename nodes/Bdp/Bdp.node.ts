@@ -32,12 +32,17 @@ import {
 	siteOrganizationResource,
 	siteResource,
 } from './resources/site/properties';
-import { executeMeasurementPoint } from './resources/measurementPoint/execute';
+import type { AggregateExecutor } from './shared/execution';
+import {
+	executeMeasurementPoint,
+	measurementBatchUpdate,
+} from './resources/measurementPoint/execute';
 import {
 	measurementFilters,
 	measurementOperation,
 	measurementResource,
 	measurementScopeProperties,
+	measurementUpdateProperties,
 } from './resources/measurementPoint/properties';
 import { executeGraphql } from './resources/graphql/execute';
 import { executeFloor } from './resources/floor/execute';
@@ -146,6 +151,7 @@ const properties: INodeProperties[] = [
 	eventHubResource,
 	...measurementScopeProperties,
 	measurementResource,
+	...measurementUpdateProperties,
 	nameFilter,
 	...buildingFilters,
 	...measurementFilters,
@@ -189,6 +195,11 @@ const resourceExecutors: Record<
 	graphql: executeGraphql,
 };
 
+// Operations that run once over all input items (keyed `resource.operation`).
+const aggregateExecutors: Record<string, AggregateExecutor> = {
+	'measurementValue.update': measurementBatchUpdate,
+};
+
 export class Bdp implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Building Data Platform',
@@ -197,7 +208,7 @@ export class Bdp implements INodeType {
 		group: ['input'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Community-maintained, read-only operations for Schneider Electric BDP.',
+		description: 'Community-maintained read and write operations for Schneider Electric BDP.',
 		defaults: { name: 'Building Data Platform' },
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
@@ -225,6 +236,31 @@ export class Bdp implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const inputItems = this.getInputData();
 		const output: INodeExecutionData[] = [];
+
+		if (inputItems.length > 0) {
+			const resource = this.getNodeParameter('resource', 0) as string;
+			const operation = this.getNodeParameter('operation', 0) as string;
+			const key = `${resource}.${operation}`;
+			const aggregate = Object.prototype.hasOwnProperty.call(aggregateExecutors, key)
+				? aggregateExecutors[key]
+				: undefined;
+			if (aggregate?.applies(this)) {
+				try {
+					for (const { json, pairedItem } of await aggregate.run(this, inputItems)) {
+						output.push({ json, pairedItem: { item: pairedItem } });
+					}
+				} catch (error) {
+					const nodeError = new NodeOperationError(this.getNode(), error as Error);
+					if (!this.continueOnFail()) throw nodeError;
+					output.push({
+						json: { error: nodeError.message },
+						error: nodeError,
+						pairedItem: inputItems.map((_, item) => ({ item })),
+					});
+				}
+				return [output];
+			}
+		}
 
 		for (let itemIndex = 0; itemIndex < inputItems.length; itemIndex++) {
 			try {

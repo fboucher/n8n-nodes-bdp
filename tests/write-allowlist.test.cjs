@@ -6,18 +6,34 @@ const { Bdp } = require('../dist/nodes/Bdp/Bdp.node.js');
 const { WRITE_ALLOWLIST } = require('../dist/nodes/Bdp/shared/writeAllowlist.js');
 const { createContext } = require('./helpers.cjs');
 
-// Every operation permitted to send POST, PATCH, PUT or DELETE. Adding a write operation
-// means adding it here AND to nodes/Bdp/shared/writeAllowlist.ts; this test fails otherwise.
-const EXPECTED_WRITES = [];
+// Every operation permitted to send POST, PATCH, PUT or DELETE, with an example request path.
+// Adding a write operation means adding it here AND to nodes/Bdp/shared/writeAllowlist.ts;
+// this test fails otherwise.
+const EXPECTED_WRITES = [
+	{ resource: 'measurementValue', operation: 'update', method: 'PATCH', path: '/api/MeasurementValues/m-1' },
+	{ resource: 'measurementValue', operation: 'update', method: 'PATCH', path: '/api/DeviceGroups/g-1/MeasurementValues' },
+];
 
-const key = (spec) => `${spec.resource}.${spec.operation} ${spec.method} ${spec.path.source}`;
+const matches = (spec, request) =>
+	spec.resource === request.resource &&
+	spec.operation === request.operation &&
+	spec.method === request.method &&
+	spec.path.test(request.path);
 
 test('the write allowlist contains exactly the registered write operations', () => {
-	assert.deepEqual(WRITE_ALLOWLIST.map(key).sort(), EXPECTED_WRITES.map(key).sort());
+	assert.equal(WRITE_ALLOWLIST.length, EXPECTED_WRITES.length);
+	for (const expected of EXPECTED_WRITES) {
+		assert.equal(WRITE_ALLOWLIST.filter((spec) => matches(spec, expected)).length, 1, JSON.stringify(expected));
+		// A longer or different path must not be covered by the same entry.
+		for (const path of [expected.path + '/extra', expected.path + '?x=1', '/other' + expected.path]) {
+			assert.ok(!WRITE_ALLOWLIST.some((spec) => matches(spec, { ...expected, path })), path);
+		}
+	}
 	for (const spec of WRITE_ALLOWLIST) {
+		assert.equal(EXPECTED_WRITES.filter((expected) => matches(spec, expected)).length, 1);
 		assert.ok(['POST', 'PATCH', 'PUT', 'DELETE'].includes(spec.method));
 		// Only PATCH replace may be retried; POST/DELETE are never idempotent here.
-		if (spec.idempotent) assert.equal(spec.method, 'PATCH', `${key(spec)} must not be retryable`);
+		if (spec.idempotent) assert.equal(spec.method, 'PATCH', 'only PATCH replace may be retryable');
 	}
 });
 

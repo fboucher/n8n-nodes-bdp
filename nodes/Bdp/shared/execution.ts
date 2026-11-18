@@ -1,4 +1,4 @@
-import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { normalizeWindow } from './time';
 
@@ -34,4 +34,17 @@ export function historyFilters(context: IExecuteFunctions, itemIndex: number): I
 
 export function unsupported(context: IExecuteFunctions): never {
 	throw new NodeOperationError(context.getNode(), 'This BDP operation is not supported.');
+}
+
+/**
+ * Operations that act on every input item at once (for example one batched request per
+ * device group) instead of once per item. `applies` decides per run, for operations that
+ * also have a per-item mode. Each record names the input item it belongs to.
+ */
+export interface AggregateExecutor {
+	applies: (context: IExecuteFunctions) => boolean;
+	run: (
+		context: IExecuteFunctions,
+		items: INodeExecutionData[],
+	) => Promise<Array<{ json: IDataObject; pairedItem: number }>>;
 }

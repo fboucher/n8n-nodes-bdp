@@ -19,7 +19,25 @@ export interface WriteOperationSpec {
 	idempotent: boolean;
 }
 
-export const WRITE_ALLOWLIST: readonly WriteOperationSpec[] = [];
+const ID = '[^/?#]+';
+
+export const WRITE_ALLOWLIST: readonly WriteOperationSpec[] = [
+	// Measurement Point -> Update (single point, then one device group in a batch)
+	{
+		resource: 'measurementValue',
+		operation: 'update',
+		method: 'PATCH',
+		path: new RegExp(`^/api/MeasurementValues/${ID}$`),
+		idempotent: true,
+	},
+	{
+		resource: 'measurementValue',
+		operation: 'update',
+		method: 'PATCH',
+		path: new RegExp(`^/api/DeviceGroups/${ID}/MeasurementValues$`),
+		idempotent: true,
+	},
+];
 
 export function findWriteOperation(
 	allowlist: readonly WriteOperationSpec[],
