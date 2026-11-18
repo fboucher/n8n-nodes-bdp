@@ -101,7 +101,8 @@ Writes are explicit operations (Update, Create, Delete, Send). No write is reach
 Common rules:
 
 - **No automatic retry.** A write that fails with a transient error (429, 5xx, a network error) is reported once and is not repeated, because the first attempt may have taken effect. Check the target, then re-run deliberately.
-- **Safe errors.** Messages state the HTTP status and what to check. They never include credentials, tokens, or the request body.
+- **Safe errors.** Messages for failed requests state the HTTP status and what to check. They never include credentials, tokens, or the request body.
+- **Per-item errors are shown as BDP sends them.** When a batch or on-demand request returns `206 Partial Content`, each failed item carries BDP's own error code and error text (capped at 500 characters), unedited, so you get the same diagnostics as with the API directly. That text comes from the service, not from this node, and could in principle repeat part of what you sent. Keep that in mind if you log or forward failed items.
 - **Validation first.** Inputs are validated before any credential lookup or request.
 
 ### Measurement Point: Update

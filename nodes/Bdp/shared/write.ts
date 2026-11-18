@@ -114,7 +114,12 @@ function text(value: unknown, max = 500): string | undefined {
 	return value.length > max ? `${value.slice(0, max)}...` : value;
 }
 
-/** Normalizes the per-item entries of a 206 Partial Content body (BDP "Ok206"). */
+/**
+ * Normalizes the per-item entries of a 206 Partial Content body (BDP "Ok206").
+ * Deliberate decision: the service's own per-item error text (metadata.ErrorText) is passed
+ * through as BDP sent it (only capped at 500 characters), so n8n users get the same diagnostics
+ * as API users. Unlike HTTP failure messages, it is not status-derived and is not filtered.
+ */
 export function normalizePartialItems(data: unknown): WriteItemStatus[] {
 	if (!Array.isArray(data)) return [];
 	return data.map((entry): WriteItemStatus => {
