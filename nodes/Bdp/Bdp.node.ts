@@ -99,6 +99,7 @@ import {
 	dataSetOperation,
 	dataSetPaginationProperties,
 	dataSetResource,
+	dataSetWriteProperties,
 } from './resources/dataSet/properties';
 import { executeEventHub } from './resources/eventHub/execute';
 import { getEventHubs } from './resources/eventHub/listSearch';
@@ -107,6 +108,7 @@ import {
 	eventHubOperation,
 	eventHubPaginationProperties,
 	eventHubResource,
+	eventHubUpdateProperties,
 } from './resources/eventHub/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
 import {
@@ -148,7 +150,9 @@ const properties: INodeProperties[] = [
 	...deviceGroupScopeProperties,
 	deviceGroupResource,
 	dataSetResource,
+	...dataSetWriteProperties,
 	eventHubResource,
+	...eventHubUpdateProperties,
 	...measurementScopeProperties,
 	measurementResource,
 	...measurementUpdateProperties,

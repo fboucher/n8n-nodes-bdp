@@ -12,6 +12,10 @@ const { createContext } = require('./helpers.cjs');
 const EXPECTED_WRITES = [
 	{ resource: 'measurementValue', operation: 'update', method: 'PATCH', path: '/api/MeasurementValues/m-1' },
 	{ resource: 'measurementValue', operation: 'update', method: 'PATCH', path: '/api/DeviceGroups/g-1/MeasurementValues' },
+	{ resource: 'dataSet', operation: 'create', method: 'POST', path: '/api/DataSets' },
+	{ resource: 'dataSet', operation: 'update', method: 'PATCH', path: '/api/DataSets/ds-1' },
+	{ resource: 'dataSet', operation: 'delete', method: 'DELETE', path: '/api/DataSets/ds-1' },
+	{ resource: 'eventHub', operation: 'update', method: 'PATCH', path: '/api/EventHubs/eh-1' },
 ];
 
 const matches = (spec, request) =>

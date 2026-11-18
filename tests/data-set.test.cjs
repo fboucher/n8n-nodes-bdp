@@ -51,7 +51,7 @@ test('Data Set Get uses selected or manual IDs', async () => {
 	}
 });
 
-test('Data Set operations only send GET requests and expose no write operation', async () => {
+test('Data Set List and Get only send GET requests; writes are separate operations', async () => {
 	const { context, calls } = createContext(
 		[
 			{ resource: 'dataSet', operation: 'getAll' },
@@ -69,9 +69,9 @@ test('Data Set operations only send GET requests and expose no write operation',
 	const operationProperty = new Bdp().description.properties.find(
 		(p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes('dataSet'),
 	);
-	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById']);
+	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById', 'create', 'update', 'delete']);
 
-	for (const operation of ['create', 'update', 'patch', 'post', 'delete']) {
+	for (const operation of ['patch', 'post', 'put']) {
 		const { context: c, calls: rejected } = createContext([{ resource: 'dataSet', operation }], []);
 		await assert.rejects(new Bdp().execute.call(c), /not supported/);
 		assert.equal(rejected.length, 0);

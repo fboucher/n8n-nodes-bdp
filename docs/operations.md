@@ -27,8 +27,12 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Device Group | Historical Values | Reads history for a device group via `GET /api/DeviceGroups/{deviceGroupId}/HistoricalValues`. |
 | Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
+| Data Set | Create | **Write.** Creates a data set via `POST /api/DataSets`. |
+| Data Set | Update | **Write.** Changes name, expiry, and/or members via `PATCH /api/DataSets/{dataSetId}`. |
+| Data Set | Delete | **Write.** Deletes a data set via `DELETE /api/DataSets/{dataSetId}`. Cannot be undone. |
 | Event Hub | List | Lists configured event hubs via `GET /api/EventHubs`; optional name and ordering filters. Credential-like fields are redacted. |
 | Event Hub | Get | Retrieves one event hub via `GET /api/EventHubs/{eventHubId}` by selected or manually entered ID. Credential-like fields are redacted. |
+| Event Hub | Update | **Write.** Changes partition count, retention policy, consumer groups, and/or telemetry payload format via `PATCH /api/EventHubs/{eventHubId}`. |
 | Measurement Point | List | Lists points in a building (default), on a floor, in a space, on a device, in a device group, or in a data set; optional name, ontology-type, unit, reference ID, metadata, context, writeable, updated-after, commissioned status, and ordering filters. |
 | Measurement Point | Get | Retrieves one point via `GET /api/MeasurementValues/{measurementId}` by selected or manually entered ID. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
@@ -76,9 +80,9 @@ Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devic
 
 Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sources/{id}/DeviceGroups`; **Commissioned Before** and **Decommissioned After** use the same strict ISO 8601 validation and UTC normalization as historical values. Device Group **Get** calls `GET /api/DeviceGroups/{deviceGroupId}`. Only GET requests are issued; `GetOnDemand` and `SetOnDemand` are deliberately out of scope.
 
-Data Set **List** and **Get** only issue GET requests; create, update, and delete are deliberately out of scope.
+Data Set **List** and **Get** only issue GET requests; Create, Update, and Delete are separate operations described under [Write operations](#write-operations).
 
-Event Hub **List** and **Get** only issue GET requests; the PATCH endpoint is deliberately out of scope. **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
+Event Hub **List** and **Get** only issue GET requests; Update is a separate operation described under [Write operations](#write-operations). **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
 
 Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. List, Get and Historical Values never write; see Update under [Write operations](#write-operations).
 
@@ -117,6 +121,24 @@ Branch on `status` (for example with an IF node) to handle failed points. A `206
 **Batch size.** Inputs larger than 500 points are split into sequential requests of 500; they are never truncated. If a later request fails, the error says how many points were already sent. The 500-point chunk size is a conservative default; the API's real limit still has to be confirmed in UAT.
 
 **Errors.** `400` (unknown point, wrong value type, or point not writeable), `403`, `404`, `413`, `429`, and `504` each produce a short message with the status and no request body.
+
+### Data Set: Create, Update, Delete
+
+**Create** (`POST /api/DataSets`) needs **Name**, **Expires On**, and **Members**. Expires On uses the same strict ISO 8601 validation as other timestamps (seconds and an explicit UTC offset or `Z`) and is sent in UTC. Members is JSON listing member IDs (UUIDs) by category: `buildings`, `floors`, `spaces`, `devices`, `measurementValues`; categories you leave out are sent as empty lists. All three are validated before any request, and the created data set is returned as BDP sent it. **Create is never retried**, because a repeat could create a second data set; to avoid duplicates after an ambiguous failure, look the data set up by name first.
+
+**Update** (`PATCH /api/DataSets/{dataSetId}`) lets you change any combination of name, expiry, and members, and sends one `replace` operation per field you set. Setting no field is rejected. **Members are replaced as a whole**: the API does not support partial member edits, so the members you provide become the complete list, and categories you omit become empty. Read the data set first (Data Set Get) if you want to add to the existing members.
+
+**Delete** (`DELETE /api/DataSets/{dataSetId}`) removes the selected or manually entered data set and returns `{ id, status: "deleted" }`. **Deletion cannot be undone.** Delete is not retried.
+
+Errors: `400`, `404`, `413` (too large), and `424` (a referenced device or ID failed) produce short messages with the HTTP status and no request body.
+
+### Event Hub: Update
+
+`PATCH /api/EventHubs/{eventHubId}` replaces any combination of **Partition Count** (a whole number), **Retention Policy** (text), **Consumer Groups** (comma-separated names, replacing the whole list), and **Telemetry Payload Format** (text). One `replace` is sent per field you set; setting none is rejected, and types are checked before any request.
+
+> **Warning:** event hub changes affect every downstream consumer of its telemetry. BDP may reject reductions of partitions or retention; that returns a safe `400` message without the request body.
+
+The response is returned as a native record with the same redaction rule as List and Get (credential-like fields become `[REDACTED]`; see the secrets decision above).
 
 ## Out of scope
 

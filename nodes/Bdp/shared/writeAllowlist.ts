@@ -37,6 +37,36 @@ export const WRITE_ALLOWLIST: readonly WriteOperationSpec[] = [
 		path: new RegExp(`^/api/DeviceGroups/${ID}/MeasurementValues$`),
 		idempotent: true,
 	},
+	// Data Set -> Create, Update, Delete. Create and Delete are never retried.
+	{
+		resource: 'dataSet',
+		operation: 'create',
+		method: 'POST',
+		path: new RegExp('^/api/DataSets$'),
+		idempotent: false,
+	},
+	{
+		resource: 'dataSet',
+		operation: 'update',
+		method: 'PATCH',
+		path: new RegExp(`^/api/DataSets/${ID}$`),
+		idempotent: true,
+	},
+	{
+		resource: 'dataSet',
+		operation: 'delete',
+		method: 'DELETE',
+		path: new RegExp(`^/api/DataSets/${ID}$`),
+		idempotent: false,
+	},
+	// Event Hub -> Update
+	{
+		resource: 'eventHub',
+		operation: 'update',
+		method: 'PATCH',
+		path: new RegExp(`^/api/EventHubs/${ID}$`),
+		idempotent: true,
+	},
 ];
 
 export function findWriteOperation(
