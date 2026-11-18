@@ -135,7 +135,7 @@ export const buildingOperation: INodeProperties = {
 	options: [
 		// Keep the familiar List label while retaining the getAll operation ID.
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
-		{ name: 'List', value: 'getAll', action: 'List buildings' },
+		{ name: 'List', value: 'getAll', action: 'Get many buildings' },
 		{ name: 'Get', value: 'getById', action: 'Get a building' },
 		{ name: 'Historical Values', value: 'getHistorical', action: 'Get building history' },
 	],

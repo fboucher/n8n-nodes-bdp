@@ -106,7 +106,7 @@ export const measurementOperation: INodeProperties = {
 	noDataExpression: true,
 	displayOptions: { show: { resource: ['measurementValue'] } },
 	options: [
-		{ name: 'Get Many', value: 'getAll', action: 'List measurement points' },
+		{ name: 'Get Many', value: 'getAll', action: 'Get many measurement points' },
 		{ name: 'Get', value: 'getById', action: 'Get a measurement point' },
 		{
 			name: 'Historical Values',
