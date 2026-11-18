@@ -19,6 +19,7 @@ const EXPECTED_WRITES = [
 	{ resource: 'deviceGroup', operation: 'setOnDemand', method: 'POST', path: '/api/DeviceGroups/g-1/SetOnDemand' },
 	{ resource: 'deviceGroup', operation: 'getOnDemand', method: 'POST', path: '/api/DeviceGroups/g-1/GetOnDemand' },
 	{ resource: 'source', operation: 'runOnDemand', method: 'POST', path: '/api/Sources/s-1/OnDemand/Refresh' },
+	{ resource: 'telemetry', operation: 'send', method: 'POST', path: '/devices/dev-1/messages/events' },
 ];
 
 const matches = (spec, request) =>

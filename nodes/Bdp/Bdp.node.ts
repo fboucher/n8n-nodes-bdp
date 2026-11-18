@@ -117,6 +117,9 @@ import {
 	eventHubUpdateProperties,
 } from './resources/eventHub/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
+import { bdpIngressApiTest } from './resources/telemetry/credentialTest';
+import { executeTelemetry, telemetrySend } from './resources/telemetry/execute';
+import { telemetryOperation, telemetryProperties } from './resources/telemetry/properties';
 import {
 	historyProperties,
 	nameFilter,
@@ -138,6 +141,8 @@ const properties: INodeProperties[] = [
 	eventHubOperation,
 	measurementOperation,
 	graphqlOperation,
+	telemetryOperation,
+	...telemetryProperties,
 	...graphqlProperties,
 	...buildingScopeProperties,
 	buildingResource,
@@ -205,6 +210,7 @@ const resourceExecutors: Record<
 	eventHub: executeEventHub,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
+	telemetry: executeTelemetry,
 };
 
 // Operations that run once over all input items (keyed `resource.operation`).
@@ -212,6 +218,7 @@ const aggregateExecutors: Record<string, AggregateExecutor> = {
 	'measurementValue.update': measurementBatchUpdate,
 	'deviceGroup.setOnDemand': deviceGroupSetOnDemand,
 	'deviceGroup.getOnDemand': deviceGroupGetOnDemand,
+	'telemetry.send': telemetrySend,
 };
 
 export class Bdp implements INodeType {
@@ -227,11 +234,20 @@ export class Bdp implements INodeType {
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
-		credentials: [{ name: 'bdpOAuth2Api', required: true }],
+		credentials: [
+			{ name: 'bdpOAuth2Api', required: true, displayOptions: { hide: { resource: ['telemetry'] } } },
+			{
+				name: 'bdpIngressApi',
+				required: true,
+				testedBy: 'bdpIngressApiTest',
+				displayOptions: { show: { resource: ['telemetry'] } },
+			},
+		],
 		properties,
 	};
 
 	methods = {
+		credentialTest: { bdpIngressApiTest },
 		listSearch: {
 			getBuildings,
 			getOrganizations,

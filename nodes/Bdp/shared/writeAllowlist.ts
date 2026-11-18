@@ -89,6 +89,14 @@ export const WRITE_ALLOWLIST: readonly WriteOperationSpec[] = [
 		path: new RegExp(`^/api/Sources/${ID}/OnDemand/${ID}$`),
 		idempotent: false,
 	},
+	// Telemetry -> Send (Telemetry Ingress API, a separate host). Never retried.
+	{
+		resource: 'telemetry',
+		operation: 'send',
+		method: 'POST',
+		path: new RegExp(`^/devices/${ID}/messages/events$`),
+		idempotent: false,
+	},
 ];
 
 export function findWriteOperation(

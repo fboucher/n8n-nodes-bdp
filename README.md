@@ -33,6 +33,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Site | List, Get |
 | Source | List, Get, Run On Demand |
 | Space | List, Get, Historical Values |
+| Telemetry | Send |
 | GraphQL | Execute Query (read-only) |
 
 List, Get, and Historical Values operations are read-only, and GraphQL stays read-only. Only the operations named in [Write operations](docs/operations.md#write-operations) send writes; subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
@@ -59,7 +60,9 @@ Measurement Point List has a Scope of In building (the default, unchanged), On f
 
 ## Credentials
 
-Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, client secret, and scope provided by your BDP administrator, then choose the UAT or Production environment. See [Credentials](docs/credentials.md).
+Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, client secret, and scope provided by your BDP administrator, then choose the UAT or Production environment. Telemetry **Send** uses a separate **BDP Telemetry Ingress API** credential (environment, device ID, and SAS token from the BDP Portal). See [Credentials](docs/credentials.md).
+
+Telemetry Send pushes time-series values into BDP through the Telemetry Ingress API, one entry per input item. It validates the source ID (UUID), timestamps (strict ISO 8601, sent in UTC) and values before any request, splits large inputs into messages of at most 4 KB, and is never retried automatically, so a timeout cannot duplicate data. BDP silently drops messages whose IDs it does not know, so a successful send means the hub accepted the message, not that BDP ingested every point. See [REST operations](docs/operations.md#telemetry-send).
 
 ## Compatibility
 

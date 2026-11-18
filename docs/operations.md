@@ -28,6 +28,7 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Device Group | Get On Demand | **Reads live** values from the source system via `POST /api/DeviceGroups/{deviceGroupId}/GetOnDemand`. |
 | Device Group | Set On Demand | **Write.** Sends values to the real source system via `POST /api/DeviceGroups/{deviceGroupId}/SetOnDemand`. Can have physical effects. |
 | Source | Run On Demand | **Write.** Runs a source-specific command via `POST /api/Sources/{sourceId}/OnDemand/{methodName}`. Can have physical effects. |
+| Telemetry | Send | **Write.** Pushes time-series telemetry through the Telemetry Ingress API (`POST /devices/{deviceId}/messages/events`). Uses the separate [Telemetry Ingress credential](credentials.md#bdp-telemetry-ingress-api). |
 | Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
 | Data Set | Create | **Write.** Creates a data set via `POST /api/DataSets`. |
@@ -142,6 +143,19 @@ Errors: `400`, `403`, `404`, `429`, and `504` produce short messages with the HT
 > **Warning:** Run On Demand sends a command to the real source system and can have physical effects. It is never retried automatically.
 
 `POST /api/Sources/{sourceId}/OnDemand/{methodName}` runs a method on the selected source. **Method Name** is URL-encoded as a single path segment, and **Payload** is sent as JSON. **The payload structure depends on the source and method, and this node does not validate it**; consult the documentation for your source. The response is returned as BDP sent it (an object as is, anything else under `response`), or `{ status: "success" }` when BDP returns nothing. Errors `400`, `403`, `404`, `429`, and `504` produce short messages with the HTTP status and never echo the payload.
+
+### Telemetry: Send
+
+Pushes time-series values from an external system into BDP through the Telemetry Ingress API (version 1.0.1), which is separate from the v3 API: its own host, its own [credential](credentials.md#bdp-telemetry-ingress-api), and its own payload. The v3 `/api/` path guard is unaffected.
+
+Set the **Source ID** (UUID) and **Point Group Reference ID** once, then provide one input item per reading with a **Point Reference ID**, a **Timestamp**, and a **Value**; use expressions to read them from each item. The node sets `ProtocolVersion` (`1.0`), `NotificationType` (`TimeSeries`), and `GeneratedAt` (now, in UTC) itself.
+
+- **Validation first.** The source ID must be a UUID. Timestamps must be ISO 8601 with seconds and an explicit UTC offset or `Z`, and are sent in UTC. Values must be a boolean, a finite number, text, or (with **Value Type** Date-Time) a UTC timestamp. **Value Type** (Automatic, Boolean, Date-Time, Number, Text, Whole Number) decides how each input value is interpreted; Automatic sends it as it is. All of this runs before the credential is read or anything is sent.
+- **Message size.** BDP recommends at most 4 KB per message (roughly ten points). The node splits larger inputs into several messages of at most 4096 bytes, never truncates, and rejects a single point that cannot fit. One run sends at most 200 messages (the per-device rate limit is 200 messages per second); a larger input is rejected with nothing sent. The 4 KB figure is the documented recommendation; whether the hub accepts larger messages still has to be confirmed in UAT.
+- **Never retried.** A timeout or 5xx is reported once, because the message may already have been delivered. To avoid duplicates, make the point and timestamp the deduplication key: before re-sending after an ambiguous failure, check whether BDP already has that point and timestamp (for example with Measurement Point Historical Values), or make downstream consumers ignore repeated `(PointReferenceId, Timestamp)` pairs.
+- **Silent drops.** BDP drops messages whose `SourceId`, point group, or point IDs it does not know or that are not commissioned, **without an error**. The output `status` of `accepted` means the hub accepted the message, not that BDP ingested the point; verify new setups by reading the point back.
+- **Output.** One item per input item, linked to it, with `pointReferenceId`, `timestamp`, `value`, `status: "accepted"`, and the `message` number it was sent in.
+- **Errors.** A `400` includes the platform error code (`x-ms-error-code`) when it is a short identifier. `401` explains that the token may be expired or invalid, or the Device ID does not match (it is case-sensitive). Messages never include the SAS token, the payload, or the response.
 
 ### Data Set: Create, Update, Delete
 
