@@ -52,7 +52,7 @@ test('Event Hub Get uses selected or manual IDs', async () => {
 	}
 });
 
-test('Event Hub operations only send GET requests and expose no PATCH operation', async () => {
+test('Event Hub List and Get only send GET requests; Update is the only write', async () => {
 	const { context, calls } = createContext(
 		[
 			{ resource: 'eventHub', operation: 'getAll' },
@@ -70,9 +70,9 @@ test('Event Hub operations only send GET requests and expose no PATCH operation'
 	const operationProperty = new Bdp().description.properties.find(
 		(p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes('eventHub'),
 	);
-	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById']);
+	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById', 'update']);
 
-	for (const operation of ['update', 'patch', 'post', 'delete']) {
+	for (const operation of ['patch', 'post', 'delete']) {
 		const { context: c, calls: rejected } = createContext([{ resource: 'eventHub', operation }], []);
 		await assert.rejects(new Bdp().execute.call(c), /not supported/);
 		assert.equal(rejected.length, 0);

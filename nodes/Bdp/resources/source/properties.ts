@@ -9,7 +9,7 @@ export const sourceResource: INodeProperties = createResourceLocator({
 	searchMethod: 'getSources',
 	listPlaceholder: 'Select a source...',
 	idPlaceholder: 'Enter a source ID',
-	displayOptions: { show: { resource: ['source'], operation: ['getById'] } },
+	displayOptions: { show: { resource: ['source'], operation: ['getById', 'runOnDemand'] } },
 });
 
 export const sourceOperation: INodeProperties = {
@@ -22,6 +22,7 @@ export const sourceOperation: INodeProperties = {
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
 		{ name: 'List', value: 'getAll', action: 'Get many sources' },
 		{ name: 'Get', value: 'getById', action: 'Get a source' },
+		{ name: 'Run On Demand', value: 'runOnDemand', action: 'Run an on demand command on a source' },
 	],
 	default: 'getAll',
 };
@@ -54,5 +55,36 @@ export const sourcePaginationProperties: INodeProperties[] = [
 		default: 100,
 		displayOptions: { show: { ...listShow, returnAll: [false] } },
 		description: 'Max number of results to return',
+	},
+];
+
+const runShow = { resource: ['source'], operation: ['runOnDemand'] };
+
+export const sourceRunOnDemandProperties: INodeProperties[] = [
+	{
+		displayName:
+			'Run On Demand sends a command to the real source system and can have physical effects. The payload is specific to the source and method, and is not validated by this node. It is never retried automatically.',
+		name: 'runOnDemandWarning',
+		type: 'notice',
+		default: '',
+		displayOptions: { show: runShow },
+	},
+	{
+		displayName: 'Method Name',
+		name: 'onDemandMethod',
+		type: 'string',
+		required: true,
+		default: '',
+		displayOptions: { show: runShow },
+		description: 'The on-demand method to run on the source, as documented for that source',
+	},
+	{
+		displayName: 'Payload',
+		name: 'onDemandPayload',
+		type: 'json',
+		default: '{}',
+		displayOptions: { show: runShow },
+		description:
+			'JSON payload for the method. Its structure depends on the source and method and is sent as is, without validation.',
 	},
 ];

@@ -51,7 +51,7 @@ test('Source Get uses selected or manual IDs', async () => {
 	}
 });
 
-test('Source operations only send GET requests and expose no on-demand operation', async () => {
+test('Source List and Get only send GET requests; Run On Demand is a separate operation', async () => {
 	const { context, calls } = createContext(
 		[
 			{ resource: 'source', operation: 'getAll' },
@@ -68,7 +68,7 @@ test('Source operations only send GET requests and expose no on-demand operation
 	const operationProperty = new Bdp().description.properties.find(
 		(p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes('source'),
 	);
-	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById']);
+	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById', 'runOnDemand']);
 
 	for (const operation of ['onDemand', 'post', 'delete']) {
 		const { context: c, calls: rejected } = createContext([{ resource: 'source', operation }], []);

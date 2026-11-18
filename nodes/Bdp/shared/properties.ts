@@ -87,6 +87,7 @@ export const resourceProperty: INodeProperties = {
 		{ name: 'Site', value: 'site' },
 		{ name: 'Source', value: 'source' },
 		{ name: 'Space', value: 'space' },
+		{ name: 'Telemetry', value: 'telemetry' },
 	],
 	default: 'building',
 };
