@@ -116,11 +116,10 @@ function text(value: unknown, max = 500): string | undefined {
 
 /**
  * Normalizes the per-item entries of a 206 Partial Content body (BDP "Ok206").
- * Deliberate decision: the service's own per-item error text (metadata.ErrorText) is passed
- * through as BDP sent it (only capped at 500 characters), so n8n users get the same diagnostics
- * as API users. Unlike HTTP failure messages, it is not status-derived and is not filtered.
+ * Service-provided error text is used only to detect a failed item; it is never
+ * copied into workflow output because it could contain submitted values.
  */
-export function normalizePartialItems(data: unknown): WriteItemStatus[] {
+export function normalizePartialItems(data: unknown, includeServiceErrorText = false): WriteItemStatus[] {
 	if (!Array.isArray(data)) return [];
 	return data.map((entry): WriteItemStatus => {
 		const record = (typeof entry === 'object' && entry !== null ? entry : {}) as Record<
@@ -135,9 +134,9 @@ export function normalizePartialItems(data: unknown): WriteItemStatus[] {
 			: {}) as Record<string, unknown>;
 		const statusCode = typeof record.statusCode === 'number' ? record.statusCode : undefined;
 		const errorCode = text(metadata.ErrorCode, 100);
-		const errorText = text(metadata.ErrorText);
+		const hasErrorText = typeof metadata.ErrorText === 'string' && metadata.ErrorText.length > 0;
 		const failedStatus = statusCode !== undefined && (statusCode < 200 || statusCode > 299);
-		const ok = !failedStatus && !errorCode && !errorText;
+		const ok = !failedStatus && !errorCode && !hasErrorText;
 		const id = text(identity.id, 200);
 		const path = text(identity.path, 500);
 		const timeStamp = text(record.timeStamp, 100);
@@ -149,7 +148,13 @@ export function normalizePartialItems(data: unknown): WriteItemStatus[] {
 			...(!ok
 				? {
 						...(errorCode ? { errorCode } : {}),
-						error: errorText ?? text(metadata.ResponseCode, 100) ?? 'The item was rejected by BDP.',
+						error: includeServiceErrorText
+							? text(metadata.ErrorText) ??
+								text(metadata.ResponseCode, 100) ??
+								'The item was rejected by BDP.'
+							: statusCode !== undefined
+								? `BDP rejected the item (HTTP ${statusCode}).`
+								: 'BDP rejected the item.',
 					}
 				: {}),
 			...(record.value !== undefined ? { value: record.value } : {}),

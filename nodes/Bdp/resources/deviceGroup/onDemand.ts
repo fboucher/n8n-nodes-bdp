@@ -148,7 +148,7 @@ export const deviceGroupGetOnDemand: AggregateExecutor = {
 			throw new NodeOperationError(context.getNode(), 'BDP returned no live values for the requested points.');
 		}
 		const requested = new Map(points.map(({ index, identity }) => [identityKey(identity)!, index]));
-		const statuses = normalizePartialItems(result.data);
+		const statuses = normalizePartialItems(result.data, true);
 		return (result.data as unknown[]).map((entry, position) => {
 			const native = (
 				typeof entry === 'object' && entry !== null && !Array.isArray(entry) ? entry : { value: entry }

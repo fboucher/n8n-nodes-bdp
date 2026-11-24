@@ -120,7 +120,7 @@ test('Set On Demand surfaces 206 per-item failures without discarding successes 
 		status: 'failed',
 		statusCode: 500,
 		errorCode: 'DeviceOffline',
-		error: 'Device is offline',
+		error: 'BDP rejected the item (HTTP 500).',
 	});
 });
 

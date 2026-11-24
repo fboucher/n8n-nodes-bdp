@@ -97,19 +97,27 @@ test('204, 200 and 206 responses normalize to distinct outcomes', () => {
 		{
 			identity: { id: 'b', path: '/p' },
 			statusCode: 404,
-			metadata: { ErrorCode: 'NotFound', ErrorText: 'No such point' },
+			metadata: { ErrorCode: 'NotFound', ErrorText: 'No such point: submitted-secret' },
 		},
-		{ identity: { id: 'c' }, metadata: { ErrorText: 'Boom' } },
+		{ identity: { id: 'c' }, metadata: { ErrorText: 'Boom: submitted-secret' } },
 	];
 	const result = normalizeWriteResponse(206, body);
 	assert.equal(result.outcome, 'partial');
 	assert.equal(result.statusCode, 206);
 	assert.equal(result.items.length, 3);
 	assert.deepEqual(result.itemErrors, [
-		{ id: 'b', path: '/p', statusCode: 404, ok: false, errorCode: 'NotFound', error: 'No such point' },
-		{ id: 'c', ok: false, error: 'Boom' },
+		{
+			id: 'b',
+			path: '/p',
+			statusCode: 404,
+			ok: false,
+			errorCode: 'NotFound',
+			error: 'BDP rejected the item (HTTP 404).',
+		},
+		{ id: 'c', ok: false, error: 'BDP rejected the item.' },
 	]);
 	assert.equal(result.items[0].ok, true);
+	assert.doesNotMatch(JSON.stringify(result.itemErrors), /submitted-secret|No such point|Boom/);
 });
 
 test('206 with an unrecognised body reports partial success without item errors', () => {
@@ -276,5 +284,5 @@ test('206 responses reach the caller as partial success', async () => {
 		body: [],
 	});
 	assert.equal(result.outcome, 'partial');
-	assert.equal(result.itemErrors[0].error, 'Not writeable');
+	assert.equal(result.itemErrors[0].error, 'BDP rejected the item (HTTP 400).');
 });

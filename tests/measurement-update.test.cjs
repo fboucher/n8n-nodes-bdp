@@ -130,7 +130,7 @@ test('Batch update surfaces 206 per-item errors without discarding successes or 
 		status: 'failed',
 		statusCode: 400,
 		errorCode: 'NotWriteable',
-		error: 'Point is not writeable',
+		error: 'BDP rejected the item (HTTP 400).',
 	});
 	assert.equal(output[0].json.statusCode, 206);
 });
