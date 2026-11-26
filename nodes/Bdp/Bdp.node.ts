@@ -32,12 +32,17 @@ import {
 	siteOrganizationResource,
 	siteResource,
 } from './resources/site/properties';
-import { executeMeasurementPoint } from './resources/measurementPoint/execute';
+import type { AggregateExecutor } from './shared/execution';
+import {
+	executeMeasurementPoint,
+	measurementBatchUpdate,
+} from './resources/measurementPoint/execute';
 import {
 	measurementFilters,
 	measurementOperation,
 	measurementResource,
 	measurementScopeProperties,
+	measurementUpdateProperties,
 } from './resources/measurementPoint/properties';
 import { executeGraphql } from './resources/graphql/execute';
 import { executeFloor } from './resources/floor/execute';
@@ -67,6 +72,7 @@ import {
 	sourceOperation,
 	sourcePaginationProperties,
 	sourceResource,
+	sourceRunOnDemandProperties,
 } from './resources/source/properties';
 import { executeDevice } from './resources/device/execute';
 import { getDevices } from './resources/device/listSearch';
@@ -79,12 +85,17 @@ import {
 	deviceScopeProperties,
 } from './resources/device/properties';
 import { executeDeviceGroup } from './resources/deviceGroup/execute';
+import {
+	deviceGroupGetOnDemand,
+	deviceGroupSetOnDemand,
+} from './resources/deviceGroup/onDemand';
 import { getDeviceGroups } from './resources/deviceGroup/listSearch';
 import {
 	deviceGroupFilters,
 	deviceGroupOperation,
 	deviceGroupPaginationProperties,
 	deviceGroupResource,
+	deviceGroupOnDemandProperties,
 	deviceGroupScopeProperties,
 } from './resources/deviceGroup/properties';
 import { executeDataSet } from './resources/dataSet/execute';
@@ -94,6 +105,7 @@ import {
 	dataSetOperation,
 	dataSetPaginationProperties,
 	dataSetResource,
+	dataSetWriteProperties,
 } from './resources/dataSet/properties';
 import { executeEventHub } from './resources/eventHub/execute';
 import { getEventHubs } from './resources/eventHub/listSearch';
@@ -102,8 +114,12 @@ import {
 	eventHubOperation,
 	eventHubPaginationProperties,
 	eventHubResource,
+	eventHubUpdateProperties,
 } from './resources/eventHub/properties';
 import { graphqlOperation, graphqlProperties } from './resources/graphql/properties';
+import { bdpIngressApiTest } from './resources/telemetry/credentialTest';
+import { executeTelemetry, telemetrySend } from './resources/telemetry/execute';
+import { telemetryOperation, telemetryProperties } from './resources/telemetry/properties';
 import {
 	historyProperties,
 	nameFilter,
@@ -125,6 +141,8 @@ const properties: INodeProperties[] = [
 	eventHubOperation,
 	measurementOperation,
 	graphqlOperation,
+	telemetryOperation,
+	...telemetryProperties,
 	...graphqlProperties,
 	...buildingScopeProperties,
 	buildingResource,
@@ -138,14 +156,19 @@ const properties: INodeProperties[] = [
 	...spaceScopeProperties,
 	spaceResource,
 	sourceResource,
+	...sourceRunOnDemandProperties,
 	...deviceScopeProperties,
 	deviceResource,
 	...deviceGroupScopeProperties,
 	deviceGroupResource,
+	...deviceGroupOnDemandProperties,
 	dataSetResource,
+	...dataSetWriteProperties,
 	eventHubResource,
+	...eventHubUpdateProperties,
 	...measurementScopeProperties,
 	measurementResource,
+	...measurementUpdateProperties,
 	nameFilter,
 	...buildingFilters,
 	...measurementFilters,
@@ -187,6 +210,15 @@ const resourceExecutors: Record<
 	eventHub: executeEventHub,
 	measurementValue: executeMeasurementPoint,
 	graphql: executeGraphql,
+	telemetry: executeTelemetry,
+};
+
+// Operations that run once over all input items (keyed `resource.operation`).
+const aggregateExecutors: Record<string, AggregateExecutor> = {
+	'measurementValue.update': measurementBatchUpdate,
+	'deviceGroup.setOnDemand': deviceGroupSetOnDemand,
+	'deviceGroup.getOnDemand': deviceGroupGetOnDemand,
+	'telemetry.send': telemetrySend,
 };
 
 export class Bdp implements INodeType {
@@ -197,16 +229,25 @@ export class Bdp implements INodeType {
 		group: ['input'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-		description: 'Community-maintained, read-only operations for Schneider Electric BDP.',
+		description: 'Community-maintained read and write operations for Schneider Electric BDP.',
 		defaults: { name: 'Building Data Platform' },
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
-		credentials: [{ name: 'bdpOAuth2Api', required: true }],
+		credentials: [
+			{ name: 'bdpOAuth2Api', required: true, displayOptions: { hide: { resource: ['telemetry'] } } },
+			{
+				name: 'bdpIngressApi',
+				required: true,
+				testedBy: 'bdpIngressApiTest',
+				displayOptions: { show: { resource: ['telemetry'] } },
+			},
+		],
 		properties,
 	};
 
 	methods = {
+		credentialTest: { bdpIngressApiTest },
 		listSearch: {
 			getBuildings,
 			getOrganizations,
@@ -225,6 +266,31 @@ export class Bdp implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const inputItems = this.getInputData();
 		const output: INodeExecutionData[] = [];
+
+		if (inputItems.length > 0) {
+			const resource = this.getNodeParameter('resource', 0) as string;
+			const operation = this.getNodeParameter('operation', 0) as string;
+			const key = `${resource}.${operation}`;
+			const aggregate = Object.prototype.hasOwnProperty.call(aggregateExecutors, key)
+				? aggregateExecutors[key]
+				: undefined;
+			if (aggregate?.applies(this)) {
+				try {
+					for (const { json, pairedItem } of await aggregate.run(this, inputItems)) {
+						output.push({ json, pairedItem: { item: pairedItem } });
+					}
+				} catch (error) {
+					const nodeError = new NodeOperationError(this.getNode(), error as Error);
+					if (!this.continueOnFail()) throw nodeError;
+					output.push({
+						json: { error: nodeError.message },
+						error: nodeError,
+						pairedItem: inputItems.map((_, item) => ({ item })),
+					});
+				}
+				return [output];
+			}
+		}
 
 		for (let itemIndex = 0; itemIndex < inputItems.length; itemIndex++) {
 			try {

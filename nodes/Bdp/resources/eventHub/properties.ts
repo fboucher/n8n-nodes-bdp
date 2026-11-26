@@ -9,7 +9,7 @@ export const eventHubResource: INodeProperties = createResourceLocator({
 	searchMethod: 'getEventHubs',
 	listPlaceholder: 'Select a event hub...',
 	idPlaceholder: 'Enter a event hub ID',
-	displayOptions: { show: { resource: ['eventHub'], operation: ['getById'] } },
+	displayOptions: { show: { resource: ['eventHub'], operation: ['getById', 'update'] } },
 });
 
 export const eventHubOperation: INodeProperties = {
@@ -22,6 +22,7 @@ export const eventHubOperation: INodeProperties = {
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
 		{ name: 'List', value: 'getAll', action: 'Get many event hubs' },
 		{ name: 'Get', value: 'getById', action: 'Get a event hub' },
+		{ name: 'Update', value: 'update', action: 'Update an event hub' },
 	],
 	default: 'getAll',
 };
@@ -53,5 +54,58 @@ export const eventHubPaginationProperties: INodeProperties[] = [
 		default: 100,
 		displayOptions: { show: { ...listShow, returnAll: [false] } },
 		description: 'Max number of results to return',
+	},
+];
+
+export const eventHubUpdateProperties: INodeProperties[] = [
+	{
+		displayName:
+			'Changing an event hub affects every downstream consumer of its telemetry. Reducing partitions or retention may be rejected by BDP.',
+		name: 'eventHubUpdateNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: { show: { resource: ['eventHub'], operation: ['update'] } },
+	},
+	{
+		displayName: 'Update Fields',
+		name: 'eventHubUpdateFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: { show: { resource: ['eventHub'], operation: ['update'] } },
+		description: 'The fields to change; at least one is required',
+		options: [
+			{
+				displayName: 'Consumer Groups',
+				name: 'consumerGroups',
+				type: 'string',
+				default: '',
+				placeholder: 'group-a, group-b',
+				description:
+					'Comma-separated consumer group names. This REPLACES the whole list of consumer groups.',
+			},
+			{
+				displayName: 'Partition Count',
+				name: 'partitionCount',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				description: 'The new number of partitions (a whole number)',
+			},
+			{
+				displayName: 'Retention Policy',
+				name: 'retentionPolicy',
+				type: 'string',
+				default: '',
+				description: 'The new retention policy value, as text',
+			},
+			{
+				displayName: 'Telemetry Payload Format',
+				name: 'telemetryPayloadFormat',
+				type: 'string',
+				default: '',
+				description: 'The new telemetry payload format, as text',
+			},
+		],
 	},
 ];

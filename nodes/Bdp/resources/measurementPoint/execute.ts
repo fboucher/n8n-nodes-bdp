@@ -1,9 +1,21 @@
 import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { historyFilters, pagination, requiredId, unsupported } from '../../shared/execution';
+import {
+	type AggregateExecutor,
+	historyFilters,
+	pagination,
+	requiredId,
+	unsupported,
+} from '../../shared/execution';
 import { fetchScopedList } from '../../shared/scopedList';
 import { normalizeTimestamp } from '../../shared/time';
-import { getBdpRequest } from '../../shared/transport';
+import { getBdpRequest, requestBdpWrite } from '../../shared/transport';
+import {
+	buildReplacePatch,
+	patchValue,
+	requireUuid,
+	type WriteItemStatus,
+} from '../../shared/write';
 
 // Each scope's parent route and the parameter that holds its resource locator.
 export const measurementScopes: Record<string, { path: string; parameter: string; label: string }> =
@@ -36,6 +48,13 @@ export async function executeMeasurementPoint(
 			);
 		}
 		return [response.data as IDataObject];
+	}
+	if (operation === 'update') {
+		// Batch mode runs once over all items (measurementBatchUpdate), never per item.
+		if (context.getNodeParameter('updateMode', itemIndex, 'single') !== 'single') {
+			return unsupported(context);
+		}
+		return updateSingle(context, itemIndex);
 	}
 	const page = pagination(context, itemIndex);
 	if (operation === 'getAll') {
@@ -85,3 +104,157 @@ export async function executeMeasurementPoint(
 	}
 	return unsupported(context);
 }
+
+const MEASUREMENT_PATCH = { '/value': patchValue.finiteNumber('Value') };
+
+// The API limit is confirmed in UAT; until then larger inputs are split into sequential
+// requests of this size rather than truncated or sent in one oversized request.
+export const MEASUREMENT_BATCH_SIZE = 500;
+
+async function updateSingle(context: IExecuteFunctions, itemIndex: number): Promise<IDataObject[]> {
+	const id = requiredId(context, itemIndex, 'measurementId', 'Measurement point');
+	const patch = buildReplacePatch(
+		[{ path: '/value', value: context.getNodeParameter('pointValue', itemIndex) }],
+		MEASUREMENT_PATCH,
+	);
+	const result = await requestBdpWrite.call(context, {
+		resource: 'measurementValue',
+		operation: 'update',
+		method: 'PATCH',
+		path: `/api/MeasurementValues/${encodeURIComponent(id)}`,
+		body: patch,
+		jsonPatch: true,
+	});
+	return [
+		{
+			measurementId: id,
+			value: patch[0].value as number,
+			status: 'success',
+			statusCode: result.statusCode,
+		},
+	];
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+	const chunks: T[][] = [];
+	for (let start = 0; start < items.length; start += size) chunks.push(items.slice(start, start + size));
+	return chunks;
+}
+
+/** Batch update: one input item per point, one PATCH per device group (chunked). */
+export const measurementBatchUpdate: AggregateExecutor = {
+	applies: (context) => context.getNodeParameter('updateMode', 0, 'single') === 'batch',
+	async run(context, items) {
+		// Validate every item before any credential lookup or request.
+		const entries = items.map((_, index) => {
+			const label = `Input item ${index + 1}`;
+			const deviceGroupId = requiredId(context, index, 'deviceGroupId', 'Device Group');
+			let measurementId: string;
+			try {
+				measurementId = requireUuid(
+					context.getNodeParameter('batchMeasurementId', index),
+					'Measurement ID',
+				);
+			} catch (error) {
+				throw new NodeOperationError(context.getNode(), `${label}: ${(error as Error).message}`);
+			}
+			let patch;
+			try {
+				patch = buildReplacePatch(
+					[{ path: '/value', value: context.getNodeParameter('batchValue', index) }],
+					MEASUREMENT_PATCH,
+				);
+			} catch (error) {
+				throw new NodeOperationError(context.getNode(), `${label}: ${(error as Error).message}`);
+			}
+			return { index, deviceGroupId, measurementId, patch };
+		});
+		if (new Set(entries.map((entry) => entry.deviceGroupId)).size > 1) {
+			throw new NodeOperationError(
+				context.getNode(),
+				'Batch update sends one device group per run; all input items must use the same Device Group.',
+			);
+		}
+		const seen = new Set<string>();
+		for (const { index, measurementId } of entries) {
+			const normalized = measurementId.toLowerCase();
+			if (seen.has(normalized)) {
+				throw new NodeOperationError(
+					context.getNode(),
+					`Input item ${index + 1}: Measurement ID ${measurementId} appears more than once in the batch.`,
+				);
+			}
+			seen.add(normalized);
+		}
+
+		const deviceGroupId = entries[0].deviceGroupId;
+		const path = `/api/DeviceGroups/${encodeURIComponent(deviceGroupId)}/MeasurementValues`;
+		const chunks = chunk(entries, MEASUREMENT_BATCH_SIZE);
+		const records: Array<{ json: IDataObject; pairedItem: number }> = [];
+
+		for (const [chunkIndex, group] of chunks.entries()) {
+			let result;
+			try {
+				result = await requestBdpWrite.call(context, {
+					resource: 'measurementValue',
+					operation: 'update',
+					method: 'PATCH',
+					path,
+					body: {
+						patches: group.map(({ measurementId, patch }) => ({ measurementId, patch })),
+					},
+					jsonPatch: true,
+				});
+			} catch (error) {
+				const applied = chunkIndex * MEASUREMENT_BATCH_SIZE;
+				const message = (error as Error).message;
+				throw new NodeOperationError(
+					context.getNode(),
+					chunkIndex === 0
+						? message
+						: `${message} Request ${chunkIndex + 1} of ${chunks.length} failed after the first ${applied} points were already sent.`,
+				);
+			}
+			const failures = new Map<string, WriteItemStatus>();
+			let confirmed = true;
+			if (result.outcome === 'partial') {
+				confirmed = result.items.length > 0;
+				for (const failure of result.itemErrors) {
+					if (failure.id) failures.set(failure.id.toLowerCase(), failure);
+				}
+			}
+			for (const { index, measurementId, patch } of group) {
+				const failure = failures.get(measurementId.toLowerCase());
+				const base = { measurementId, value: patch[0].value as number };
+				if (failure) {
+					records.push({
+						pairedItem: index,
+						json: {
+							...base,
+							status: 'failed',
+							statusCode: failure.statusCode ?? 206,
+							...(failure.errorCode ? { errorCode: failure.errorCode } : {}),
+							error: failure.error ?? 'The point was rejected by BDP.',
+						},
+					});
+				} else if (!confirmed) {
+					records.push({
+						pairedItem: index,
+						json: {
+							...base,
+							status: 'unconfirmed',
+							statusCode: 206,
+							error: 'BDP reported a partial result without per-point details; verify this point.',
+						},
+					});
+				} else {
+					records.push({
+						pairedItem: index,
+						json: { ...base, status: 'success', statusCode: result.statusCode },
+					});
+				}
+			}
+		}
+		return records;
+	},
+};

@@ -1,8 +1,10 @@
 # n8n-nodes-bdp
 
-This is an n8n community node. It lets you read data from Schneider Electric EcoStruxure **Building Data Platform (BDP)** in your n8n workflows.
+This is an n8n community node. It lets you read data from, and write data to, Schneider Electric EcoStruxure **Building Data Platform (BDP)** in your n8n workflows.
 
-Building Data Platform (BDP) exposes organization, site, building, floor, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access to both.
+Building Data Platform (BDP) exposes organization, site, building, floor, measurement point, and historical telemetry data through REST and GraphQL APIs. This node provides read-only access through GraphQL and read access plus a small, explicit set of write operations through REST.
+
+> **Warning:** write operations change data in BDP and can reach physical equipment. There is no undo. Test on a designated test point first. **Set On Demand and Run On Demand send commands straight to the real source system and are the highest-risk operations; they are never retried automatically.**
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -21,19 +23,20 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Resource | Operations |
 | --- | --- |
 | Building | List, Get, Historical Values |
-| Data Set | List, Get |
+| Data Set | List, Get, Create, Update, Delete |
 | Device | List, Get, Historical Values |
-| Device Group | List, Get, Historical Values |
-| Event Hub | List, Get |
+| Device Group | List, Get, Historical Values, Get On Demand, Set On Demand |
+| Event Hub | List, Get, Update |
 | Floor | List, Get, Historical Values |
-| Measurement Point | List, Get, Historical Values |
+| Measurement Point | List, Get, Historical Values, Update |
 | Organization | List, Get |
 | Site | List, Get |
-| Source | List, Get |
+| Source | List, Get, Run On Demand |
 | Space | List, Get, Historical Values |
+| Telemetry | Send |
 | GraphQL | Execute Query (read-only) |
 
-All operations are read-only. Writes, commands, and subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
+List, Get, and Historical Values operations are read-only, and GraphQL stays read-only. Only the operations named in [Write operations](docs/operations.md#write-operations) send writes; subscriptions are not supported. See [REST operations](docs/operations.md) and [GraphQL](docs/graphql.md) for details.
 
 Building List can target all accessible buildings, an organization, or a site, with optional server-side filters and counts. Building Get can also request counts; the Building selector can be narrowed to an organization or site.
 
@@ -41,15 +44,15 @@ Floor List returns floors within a selected building, with optional name, refere
 
 Space List returns spaces either **In building** or **On floor**, showing only the relevant parent selector, with optional name, reference ID, metadata, ontology type, measurement-count, Commissioned Status, and ordering filters. Space Get accepts a manual ID or a searchable selection scoped to the chosen building or floor.
 
-Source List returns the integration sources accessible to you, with optional type, name, and ordering filters; Source Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the on-demand command endpoint is not supported.
+Source List returns the integration sources accessible to you, with optional type, name, and ordering filters; Source Get accepts a manual ID or a searchable selection. Source Run On Demand sends a command to the source system; see the warning below.
 
 Device List has a Scope of In building, On floor, In space, or From source, showing only the relevant parent selector, with optional name, metadata, reference ID, ontology type, product type, vendor identifier, Commissioned Status, and ordering filters. Device Get accepts a manual ID or a searchable selection scoped to the chosen parent.
 
-Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. This resource is strictly read-only: the GetOnDemand and SetOnDemand endpoints are not supported.
+Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. Device Group Get On Demand reads live values from the source system, and Set On Demand writes values to it; see the warning below.
 
-Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. This resource is strictly read-only: create, update, and delete are not supported.
+Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. Data Set Create, Update, and Delete are writes: Create needs a name, an expiry (ISO 8601 with an explicit offset) and members; Update changes any of name, expiry, or members (members are replaced as a whole); Delete cannot be undone. See [Write operations](docs/operations.md#write-operations).
 
-Event Hub List returns the event hubs configured for your application, with optional name and ordering filters; Event Hub Get accepts a manual ID or a searchable selection. This resource is strictly read-only (the PATCH endpoint is not supported). Because the response schema was not available when this was built, any field whose name looks like a credential (connection string, key, secret, token, password, SAS) is returned as `[REDACTED]`; see [REST operations](docs/operations.md).
+Event Hub List returns the event hubs configured for your application, with optional name and ordering filters; Event Hub Get accepts a manual ID or a searchable selection. Event Hub Update changes partition count, retention policy, consumer groups, or telemetry payload format, and affects downstream consumers (see [Write operations](docs/operations.md#write-operations)). Because the response schema was not available when this was built, any field whose name looks like a credential (connection string, key, secret, token, password, SAS) is returned as `[REDACTED]`; see [REST operations](docs/operations.md).
 
 Measurement Point List has a Scope of In building (the default, unchanged), On floor, In space, On device, In device group, or In data set, showing only the relevant parent selector. It supports name, ontology type, unit, reference ID, metadata, context, Writeable, Updated After, Commissioned Status, and ordering filters; unset filters are not sent, and Updated After uses the same strict ISO 8601 validation and UTC normalization as historical values. Measurement Point Get accepts a manual ID or a searchable selection, and the Measurement Point selector follows the chosen scope. Workflows saved before scopes existed keep using the building.
 
@@ -57,7 +60,9 @@ Measurement Point List has a Scope of In building (the default, unchanged), On f
 
 ## Credentials
 
-Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, client secret, and scope provided by your BDP administrator, then choose the UAT or Production environment. See [Credentials](docs/credentials.md).
+Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, client secret, and scope provided by your BDP administrator, then choose the UAT or Production environment. Telemetry **Send** uses a separate **BDP Telemetry Ingress API** credential (environment, device ID, and SAS token from the BDP Portal). See [Credentials](docs/credentials.md).
+
+Telemetry Send pushes time-series values into BDP through the Telemetry Ingress API, one entry per input item. It validates the source ID (UUID), timestamps (strict ISO 8601, sent in UTC) and values before any request, splits large inputs into messages of at most 4 KB, and is never retried automatically, so a timeout cannot duplicate data. BDP silently drops messages whose IDs it does not know, so a successful send means the hub accepted the message, not that BDP ingested every point. See [REST operations](docs/operations.md#telemetry-send).
 
 ## Compatibility
 

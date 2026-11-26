@@ -1,9 +1,24 @@
 import type { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { pagination, requiredId, unsupported } from '../../shared/execution';
-import { fetchAllPages, getBdpRequest } from '../../shared/transport';
+import { fetchAllPages, getBdpRequest, requestBdpWrite } from '../../shared/transport';
+import { buildReplacePatch, type WriteResult } from '../../shared/write';
+import { DATA_SET_PATCH_PATHS, validateExpiresOn, validateMembers, validateName } from './validate';
 
-// Read-only: only GET /api/DataSets and GET /api/DataSets/{id}. Create, update and delete are intentionally not supported.
+// List and Get are GET-only. Create, Update and Delete are the only writes (see shared/writeAllowlist.ts).
+
+function recordOrStatus(result: WriteResult, fallback: IDataObject): IDataObject {
+	if (
+		result.outcome === 'success' &&
+		typeof result.data === 'object' &&
+		result.data !== null &&
+		!Array.isArray(result.data)
+	) {
+		return result.data as IDataObject;
+	}
+	// The write succeeded but BDP returned no record; say so instead of failing after the fact.
+	return { ...fallback, statusCode: result.statusCode };
+}
 export async function executeDataSet(
 	context: IExecuteFunctions,
 	itemIndex: number,
@@ -33,6 +48,49 @@ export async function executeDataSet(
 			);
 		}
 		return [response.data as IDataObject];
+	}
+	if (operation === 'create') {
+		const body = {
+			name: validateName(context.getNodeParameter('dataSetName', itemIndex, '')),
+			expiresOn: validateExpiresOn(context.getNodeParameter('dataSetExpiresOn', itemIndex, '')),
+			members: validateMembers(context.getNodeParameter('dataSetMembers', itemIndex, '{}')),
+		};
+		// Never retried: a repeated create could make a second data set.
+		const result = await requestBdpWrite.call(context, {
+			resource: 'dataSet',
+			operation: 'create',
+			method: 'POST',
+			path: '/api/DataSets',
+			body,
+		});
+		return [recordOrStatus(result, { name: body.name as string, status: 'created' })];
+	}
+	if (operation === 'update') {
+		const id = requiredId(context, itemIndex, 'dataSetId', 'Data Set');
+		const fields = context.getNodeParameter('dataSetUpdateFields', itemIndex, {}) as IDataObject;
+		const changes = ['name', 'expiresOn', 'members']
+			.filter((field) => Object.prototype.hasOwnProperty.call(fields, field))
+			.map((field) => ({ path: `/${field}`, value: fields[field] }));
+		const patch = buildReplacePatch(changes, DATA_SET_PATCH_PATHS);
+		const result = await requestBdpWrite.call(context, {
+			resource: 'dataSet',
+			operation: 'update',
+			method: 'PATCH',
+			path: `/api/DataSets/${encodeURIComponent(id)}`,
+			body: patch,
+			jsonPatch: true,
+		});
+		return [recordOrStatus(result, { id, status: 'updated' })];
+	}
+	if (operation === 'delete') {
+		const id = requiredId(context, itemIndex, 'dataSetId', 'Data Set');
+		const result = await requestBdpWrite.call(context, {
+			resource: 'dataSet',
+			operation: 'delete',
+			method: 'DELETE',
+			path: `/api/DataSets/${encodeURIComponent(id)}`,
+		});
+		return [{ id, status: 'deleted', statusCode: result.statusCode }];
 	}
 	return unsupported(context);
 }

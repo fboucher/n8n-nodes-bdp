@@ -6,6 +6,14 @@ import type {
 } from 'n8n-workflow';
 import { NodeOperationError, sleep } from 'n8n-workflow';
 import { credentialSecrets, parseGraphqlResponse, prepareGraphqlRequest } from './graphql';
+import { sasTokenProblem } from './ingress';
+import { normalizeWriteResponse, safeWriteFailureMessage, type WriteResult } from './write';
+import {
+	findWriteOperation,
+	WRITE_ALLOWLIST,
+	type WriteMethod,
+	type WriteOperationSpec,
+} from './writeAllowlist';
 
 export const PAGE_SIZE = 5000;
 const MAX_RETRIES = 3;
@@ -15,6 +23,7 @@ export type BdpContext = IExecuteFunctions | ILoadOptionsFunctions;
 
 export interface BdpPage {
 	data: unknown;
+	statusCode?: number;
 	headers: Record<string, string | string[] | undefined>;
 }
 
@@ -116,6 +125,145 @@ export async function requestBdp(
 	return authenticatedRequest(this, options);
 }
 
+export interface BdpWriteRequest {
+	/** Node resource and operation issuing the write; must match an allowlist entry. */
+	resource: string;
+	operation: string;
+	method: WriteMethod;
+	path: string;
+	/** JSON body. Omit for body-less requests such as DELETE. */
+	body?: unknown;
+	/** Send `application/json-patch+json` (every v3 PATCH endpoint) instead of `application/json`. */
+	jsonPatch?: boolean;
+	/**
+	 * Opt in to the bounded automatic retry. Only honoured when the allowlist entry is
+	 * idempotent, so it is safe for PATCH replace and never for POST create/on-demand/telemetry.
+	 */
+	retry?: boolean;
+}
+
+/**
+ * The only entry point for v3 write requests (besides the GraphQL query POST).
+ * Refuses anything that is not on the write allowlist, sends the existing credential,
+ * base URL and version header, does not retry by default, and returns a normalized result.
+ */
+export async function requestBdpWrite(
+	this: BdpContext,
+	request: BdpWriteRequest,
+	allowlist: readonly WriteOperationSpec[] = WRITE_ALLOWLIST,
+): Promise<WriteResult> {
+	if (!request.path.startsWith('/api/') || request.path.startsWith('//')) {
+		throw new NodeOperationError(this.getNode(), 'Only documented BDP API operations are available.');
+	}
+	const spec = findWriteOperation(allowlist, request);
+	if (!spec) {
+		throw new NodeOperationError(this.getNode(), 'This BDP write operation is not permitted.');
+	}
+
+	const credentials = await this.getCredentials('bdpOAuth2Api');
+	const hasBody = request.body !== undefined;
+	const options: IHttpRequestOptions = {
+		method: request.method,
+		url: `${getApiBaseUrl(credentials.environment)}${request.path}`,
+		headers: {
+			'X-Api-Version': '3.0',
+			Accept: 'application/json',
+			...(hasBody
+				? {
+						'Content-Type': request.jsonPatch ? 'application/json-patch+json' : 'application/json',
+					}
+				: {}),
+		},
+		...(hasBody ? { body: request.body as IDataObject } : {}),
+		json: true,
+		returnFullResponse: true,
+	};
+	const policy: RequestPolicy =
+		request.retry === true && spec.idempotent
+			? { maxRetries: MAX_RETRIES, failureMessage: safeWriteFailureMessage }
+			: NO_RETRY_WRITE_POLICY;
+	const response = await authenticatedRequest(this, options, undefined, policy);
+	return normalizeWriteResponse(response.statusCode, response.data);
+}
+
+// ---------------------------------------------------------------------------
+// Telemetry Ingress API (Azure IoT Hub). A separate host, credential and payload from the v3 API.
+// The host and api-version are fixed constants: the node cannot be pointed at another host.
+// ---------------------------------------------------------------------------
+
+const INGRESS_API_VERSION = '2020-09-30';
+
+function getIngressBaseUrl(environment: unknown): string {
+	if (environment === 'uat') return 'https://Graph-BdpDif-UAT.azure-devices.net';
+	if (environment === 'production') return 'https://Graph-BdpDif.azure-devices.net';
+	throw new Error('Choose UAT or Production in the BDP Telemetry Ingress credential.');
+}
+
+function ingressFailureMessage(
+	status?: number,
+	headers: Record<string, string | string[] | undefined> = {},
+): string {
+	// The platform error code is a short identifier; anything else is dropped.
+	const rawCode = headerValue(headers, 'x-ms-error-code');
+	const code = rawCode && /^[A-Za-z0-9_.:-]{1,64}$/.test(rawCode) ? rawCode : undefined;
+	const suffix = ' The message was not retried automatically; its delivery may be unknown.';
+	if (status === 401) {
+		return 'Telemetry ingress authentication failed. The SAS token may be expired or invalid, or the Device ID does not match the token (it is case-sensitive).';
+	}
+	if (status === 400) {
+		return `Telemetry ingress rejected the message (HTTP 400${code ? `, error code ${code}` : ''}). Check the payload.`;
+	}
+	if (status === 403) return 'Telemetry ingress denied access. Check the SAS token policy and Device ID.';
+	if (status === 404) return 'Telemetry ingress could not find the device. Check the Device ID and environment.';
+	if (status === 413) return 'Telemetry ingress rejected the message as too large (HTTP 413).';
+	if (status === 429) return `Telemetry ingress rate limit was reached (HTTP 429).${suffix}`;
+	if (status !== undefined) {
+		return `Telemetry ingress failed with HTTP ${status}${code ? ` (error code ${code})` : ''}.${suffix}`;
+	}
+	return `Telemetry ingress failed before a response was received.${suffix}`;
+}
+
+/** Fails fast on a missing, malformed or expired SAS token without ever repeating it. */
+function checkSasToken(context: BdpContext, token: unknown): void {
+	const problem = sasTokenProblem(token);
+	if (problem) throw new NodeOperationError(context.getNode(), problem);
+}
+
+/** Sends one telemetry message. Never retried: a repeat after a timeout could duplicate telemetry. */
+export async function requestBdpIngress(
+	this: BdpContext,
+	message: IDataObject,
+	allowlist: readonly WriteOperationSpec[] = WRITE_ALLOWLIST,
+): Promise<WriteResult> {
+	const credentials = await this.getCredentials('bdpIngressApi');
+	const deviceId = typeof credentials.deviceId === 'string' ? credentials.deviceId.trim() : '';
+	if (!deviceId) {
+		throw new NodeOperationError(this.getNode(), 'Set the Device ID in the BDP Telemetry Ingress credential.');
+	}
+	checkSasToken(this, credentials.sasToken);
+	const path = `/devices/${encodeURIComponent(deviceId)}/messages/events`;
+	if (
+		!findWriteOperation(allowlist, { resource: 'telemetry', operation: 'send', method: 'POST', path })
+	) {
+		throw new NodeOperationError(this.getNode(), 'This BDP write operation is not permitted.');
+	}
+	const options: IHttpRequestOptions = {
+		method: 'POST',
+		url: `${getIngressBaseUrl(credentials.environment)}${path}`,
+		qs: { 'api-version': INGRESS_API_VERSION },
+		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+		body: message,
+		json: true,
+		returnFullResponse: true,
+	};
+	const response = await authenticatedRequest(this, options, undefined, {
+		maxRetries: 0,
+		failureMessage: ingressFailureMessage,
+		credentialType: 'bdpIngressApi',
+	});
+	return normalizeWriteResponse(response.statusCode, response.data);
+}
+
 export async function requestBdpGraphql(
 	this: BdpContext,
 	query: unknown,
@@ -144,20 +292,36 @@ export async function requestBdpGraphql(
 	]);
 }
 
+interface RequestPolicy {
+	maxRetries: number;
+	failureMessage: (status?: number, headers?: Record<string, string | string[] | undefined>) => string;
+	/** Credential used to authenticate the request; defaults to the BDP OAuth2 credential. */
+	credentialType?: string;
+}
+
+const READ_POLICY: RequestPolicy = { maxRetries: MAX_RETRIES, failureMessage: safeFailureMessage };
+// Writes are never retried unless the call opts in and the allowlist marks it idempotent.
+const NO_RETRY_WRITE_POLICY: RequestPolicy = {
+	maxRetries: 0,
+	failureMessage: safeWriteFailureMessage,
+};
+
 async function authenticatedRequest(
 	context: BdpContext,
 	options: IHttpRequestOptions,
 	graphqlCredentials?: IDataObject,
+	policy: RequestPolicy = READ_POLICY,
 ): Promise<BdpPage> {
 	for (let attempt = 0; ; attempt++) {
 		try {
 			const response = await context.helpers.httpRequestWithAuthentication.call(
 				context,
-				'bdpOAuth2Api',
+				policy.credentialType ?? 'bdpOAuth2Api',
 				options,
 			);
 			return {
 				data: response.body,
+				statusCode: typeof response.statusCode === 'number' ? response.statusCode : undefined,
 				headers: response.headers ?? {},
 			};
 		} catch (error) {
@@ -182,11 +346,11 @@ async function authenticatedRequest(
 			const retryable =
 				isTransientStatus(status) || (status === undefined && isTransientNetworkError(error));
 
-			if (!retryable || attempt >= MAX_RETRIES) {
-				throw new NodeOperationError(context.getNode(), safeFailureMessage(status));
+			if (!retryable || attempt >= policy.maxRetries) {
+				throw new NodeOperationError(context.getNode(), policy.failureMessage(status, headers));
 			}
 			if (headerValue(headers, 'retry-after') && retryDelay === undefined) {
-				throw new NodeOperationError(context.getNode(), safeFailureMessage(status));
+				throw new NodeOperationError(context.getNode(), policy.failureMessage(status, headers));
 			}
 
 			const backoff = Math.min(250 * 2 ** attempt, 2000);
