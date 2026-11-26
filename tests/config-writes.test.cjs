@@ -130,7 +130,7 @@ test('Data Set Update rejects no changes, bad values and missing IDs before any 
 		[update({ name: '' }), /Name must be a non-empty/],
 		[update({ expiresOn: 'tomorrow' }), /explicit UTC offset/],
 		[update({ members: { buildings: ['x'] } }), /valid UUID/],
-		[update({ name: 'x' }, { dataSetId: ref('  ') }), /Data Set ID is required/],
+		[update({ name: 'x' }, { dataSetId: ref('  ') }), /Dataset ID is required/],
 	]) {
 		const { context, calls } = createContext([parameters], []);
 		await assert.rejects(new Bdp().execute.call(context), message);
@@ -161,7 +161,7 @@ test('Data Set Delete targets only the selected or entered ID and confirms the d
 		assert.equal(calls[0].headers['Content-Type'], undefined);
 	}
 	const { context, calls } = createContext([{ resource: 'dataSet', operation: 'delete', dataSetId: ref('') }], []);
-	await assert.rejects(new Bdp().execute.call(context), /Data Set ID is required/);
+	await assert.rejects(new Bdp().execute.call(context), /Dataset ID is required/);
 	assert.equal(calls.length, 0);
 });
 
