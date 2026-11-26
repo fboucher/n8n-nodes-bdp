@@ -29,15 +29,15 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Device Group | Set On Demand | **Write.** Sends values to the real source system via `POST /api/DeviceGroups/{deviceGroupId}/SetOnDemand`. Can have physical effects. |
 | Source | Run On Demand | **Write.** Runs a source-specific command via `POST /api/Sources/{sourceId}/OnDemand/{methodName}`. Can have physical effects. |
 | Telemetry | Send | **Write.** Pushes time-series telemetry through the Telemetry Ingress API (`POST /devices/{deviceId}/messages/events`). Uses the separate [Telemetry Ingress credential](credentials.md#bdp-telemetry-ingress-api). |
-| Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
-| Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
-| Data Set | Create | **Write.** Creates a data set via `POST /api/DataSets`. |
-| Data Set | Update | **Write.** Changes name, expiry, and/or members via `PATCH /api/DataSets/{dataSetId}`. |
-| Data Set | Delete | **Write.** Deletes a data set via `DELETE /api/DataSets/{dataSetId}`. Cannot be undone. |
+| Dataset | List | Lists accessible datasets via `GET /api/DataSets`; optional name and ordering filters. |
+| Dataset | Get | Retrieves the full native record for one selected or manually entered dataset ID via `GET /api/DataSets/{dataSetId}`. |
+| Dataset | Create | **Write.** Creates a dataset via `POST /api/DataSets`. |
+| Dataset | Update | **Write.** Changes name, expiry, and/or members via `PATCH /api/DataSets/{dataSetId}`. |
+| Dataset | Delete | **Write.** Deletes a dataset via `DELETE /api/DataSets/{dataSetId}`. Cannot be undone. |
 | Event Hub | List | Lists configured event hubs via `GET /api/EventHubs`; optional name and ordering filters. Credential-like fields are redacted. |
 | Event Hub | Get | Retrieves one event hub via `GET /api/EventHubs/{eventHubId}` by selected or manually entered ID. Credential-like fields are redacted. |
 | Event Hub | Update | **Write.** Changes partition count, retention policy, consumer groups, and/or telemetry payload format via `PATCH /api/EventHubs/{eventHubId}`. |
-| Measurement Point | List | Lists points in a building (default), on a floor, in a space, on a device, in a device group, or in a data set; optional name, ontology-type, unit, reference ID, metadata, context, writeable, updated-after, commissioned status, and ordering filters. |
+| Measurement Point | List | Lists points in a building (default), on a floor, in a space, on a device, in a device group, or in a dataset; optional name, ontology-type, unit, reference ID, metadata, context, writeable, updated-after, commissioned status, and ordering filters. |
 | Measurement Point | Get | Retrieves one point via `GET /api/MeasurementValues/{measurementId}` by selected or manually entered ID. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
 | Measurement Point | Update | **Write.** Replaces the numeric value of one point (`PATCH /api/MeasurementValues/{measurementId}`) or of many points in a device group (`PATCH /api/DeviceGroups/{deviceGroupId}/MeasurementValues`). See [Write operations](#write-operations). |
@@ -84,7 +84,7 @@ Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devic
 
 Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sources/{id}/DeviceGroups`; **Commissioned Before** and **Decommissioned After** use the same strict ISO 8601 validation and UTC normalization as historical values. Device Group **Get** calls `GET /api/DeviceGroups/{deviceGroupId}`. Only GET requests are issued; `GetOnDemand` and `SetOnDemand` are deliberately out of scope.
 
-Data Set **List** and **Get** only issue GET requests; Create, Update, and Delete are separate operations described under [Write operations](#write-operations).
+Dataset **List** and **Get** only issue GET requests; Create, Update, and Delete are separate operations described under [Write operations](#write-operations).
 
 Event Hub **List** and **Get** only issue GET requests; Update is a separate operation described under [Write operations](#write-operations). **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
 
@@ -158,13 +158,13 @@ Set the **Source ID** (UUID) and **Point Group Reference ID** once, then provide
 - **Output.** One item per input item, linked to it, with `pointReferenceId`, `timestamp`, `value`, `status: "accepted"`, and the `message` number it was sent in.
 - **Errors.** A `400` includes the platform error code (`x-ms-error-code`) when it is a short identifier. `401` explains that the token may be expired or invalid, or the Device ID does not match (it is case-sensitive). Messages never include the SAS token, the payload, or the response.
 
-### Data Set: Create, Update, Delete
+### Dataset: Create, Update, Delete
 
-**Create** (`POST /api/DataSets`) needs **Name**, **Expires On**, and **Members**. Expires On uses the same strict ISO 8601 validation as other timestamps (seconds and an explicit UTC offset or `Z`) and is sent in UTC. Members is JSON listing member IDs (UUIDs) by category: `buildings`, `floors`, `spaces`, `devices`, `measurementValues`; categories you leave out are sent as empty lists. All three are validated before any request, and the created data set is returned as BDP sent it. **Create is never retried**, because a repeat could create a second data set; to avoid duplicates after an ambiguous failure, look the data set up by name first.
+**Create** (`POST /api/DataSets`) needs **Name**, **Expires On**, and **Members**. Expires On uses the same strict ISO 8601 validation as other timestamps (seconds and an explicit UTC offset or `Z`) and is sent in UTC. Members is JSON listing member IDs (UUIDs) by category: `buildings`, `floors`, `spaces`, `devices`, `measurementValues`; categories you leave out are sent as empty lists. All three are validated before any request, and the created dataset is returned as BDP sent it. **Create is never retried**, because a repeat could create a second dataset; to avoid duplicates after an ambiguous failure, look the dataset up by name first.
 
-**Update** (`PATCH /api/DataSets/{dataSetId}`) lets you change any combination of name, expiry, and members, and sends one `replace` operation per field you set. Setting no field is rejected. **Members are replaced as a whole**: the API does not support partial member edits, so the members you provide become the complete list, and categories you omit become empty. Read the data set first (Data Set Get) if you want to add to the existing members.
+**Update** (`PATCH /api/DataSets/{dataSetId}`) lets you change any combination of name, expiry, and members, and sends one `replace` operation per field you set. Setting no field is rejected. **Members are replaced as a whole**: the API does not support partial member edits, so the members you provide become the complete list, and categories you omit become empty. Read the dataset first (Dataset Get) if you want to add to the existing members.
 
-**Delete** (`DELETE /api/DataSets/{dataSetId}`) removes the selected or manually entered data set and returns `{ id, status: "deleted" }`. **Deletion cannot be undone.** Delete is not retried.
+**Delete** (`DELETE /api/DataSets/{dataSetId}`) removes the selected or manually entered dataset and returns `{ id, status: "deleted" }`. **Deletion cannot be undone.** Delete is not retried.
 
 Errors: `400`, `404`, `413` (too large), and `424` (a referenced device or ID failed) produce short messages with the HTTP status and no request body.
 

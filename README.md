@@ -23,7 +23,7 @@ To try it locally without publishing, see [Docker Compose setup](docs/docker-com
 | Resource | Operations |
 | --- | --- |
 | Building | List, Get, Historical Values |
-| Data Set | List, Get, Create, Update, Delete |
+| Dataset | List, Get, Create, Update, Delete |
 | Device | List, Get, Historical Values |
 | Device Group | List, Get, Historical Values, Get On Demand, Set On Demand |
 | Event Hub | List, Get, Update |
@@ -50,11 +50,11 @@ Device List has a Scope of In building, On floor, In space, or From source, show
 
 Device Group List has a Scope of In building or From source, with optional reference ID, metadata, Commissioned Status, Commissioned Before, Decommissioned After, and ordering filters. The two timestamps must be ISO 8601 with seconds and an explicit UTC offset or Z, and are normalized to UTC. Device Group Get accepts a manual ID or a searchable selection. Device Group Get On Demand reads live values from the source system, and Set On Demand writes values to it; see the warning below.
 
-Data Set List returns the data sets available to your application, with optional name and ordering filters; Data Set Get accepts a manual ID or a searchable selection. Data Set Create, Update, and Delete are writes: Create needs a name, an expiry (ISO 8601 with an explicit offset) and members; Update changes any of name, expiry, or members (members are replaced as a whole); Delete cannot be undone. See [Write operations](docs/operations.md#write-operations).
+Dataset List returns the datasets available to your application, with optional name and ordering filters; Dataset Get accepts a manual ID or a searchable selection. Dataset Create, Update, and Delete are writes: Create needs a name, an expiry (ISO 8601 with an explicit offset) and members; Update changes any of name, expiry, or members (members are replaced as a whole); Delete cannot be undone. See [Write operations](docs/operations.md#write-operations).
 
 Event Hub List returns the event hubs configured for your application, with optional name and ordering filters; Event Hub Get accepts a manual ID or a searchable selection. Event Hub Update changes partition count, retention policy, consumer groups, or telemetry payload format, and affects downstream consumers (see [Write operations](docs/operations.md#write-operations)). Because the response schema was not available when this was built, any field whose name looks like a credential (connection string, key, secret, token, password, SAS) is returned as `[REDACTED]`; see [REST operations](docs/operations.md).
 
-Measurement Point List has a Scope of In building (the default, unchanged), On floor, In space, On device, In device group, or In data set, showing only the relevant parent selector. It supports name, ontology type, unit, reference ID, metadata, context, Writeable, Updated After, Commissioned Status, and ordering filters; unset filters are not sent, and Updated After uses the same strict ISO 8601 validation and UTC normalization as historical values. Measurement Point Get accepts a manual ID or a searchable selection, and the Measurement Point selector follows the chosen scope. Workflows saved before scopes existed keep using the building.
+Measurement Point List has a Scope of In building (the default, unchanged), On floor, In space, On device, In device group, or In dataset, showing only the relevant parent selector. It supports name, ontology type, unit, reference ID, metadata, context, Writeable, Updated After, Commissioned Status, and ordering filters; unset filters are not sent, and Updated After uses the same strict ISO 8601 validation and UTC normalization as historical values. Measurement Point Get accepts a manual ID or a searchable selection, and the Measurement Point selector follows the chosen scope. Workflows saved before scopes existed keep using the building.
 
 **Historical Values** is an operation on each parent resource: Building, Floor, Space, Device, Device Group, and Measurement Point. Floor, Space, Device, and Device Group Historical Values read their values directly (`GET /api/{Floors|Spaces|Devices|DeviceGroups}/{id}/HistoricalValues`) without listing measurement points first, using the same required Start and End (strict ISO 8601, UTC-normalized, Start earlier than End), ascending order, Return All / Limit pagination, and error handling as Building history.
 
