@@ -1,6 +1,6 @@
 # REST operations
 
-The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). All operations are read-only.
+The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). All operations are read-only. See the [BDP REST API specification](https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362).
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |
