@@ -80,7 +80,7 @@ test('Device Group Get uses selected or manual IDs without requiring a parent', 
 	}
 });
 
-test('Device Group requests are GET-only and no on-demand operation exists', async () => {
+test('Device Group List, Get and Historical Values are GET-only; on-demand calls are separate operations', async () => {
 	const { context, calls } = createContext(
 		[
 			{ resource: 'deviceGroup', operation: 'getAll', buildingId: id('b-1') },
@@ -96,8 +96,8 @@ test('Device Group requests are GET-only and no on-demand operation exists', asy
 	assert.ok(calls.every(({ url }) => !/OnDemand/i.test(url)));
 	const operations = new Bdp().description.properties.find(
 		(p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes('deviceGroup'));
-	assert.deepEqual(operations.options.map(({ value }) => value), ['getAll', 'getById', 'getHistorical']);
-	for (const operation of ['getOnDemand', 'setOnDemand', 'post']) {
+	assert.deepEqual(operations.options.map(({ value }) => value), ['getAll', 'getById', 'getHistorical', 'getOnDemand', 'setOnDemand']);
+	for (const operation of ['post', 'delete', 'update']) {
 		const { context: c, calls: rejected } = createContext([{ resource: 'deviceGroup', operation }], []);
 		await assert.rejects(new Bdp().execute.call(c), /not supported/);
 		assert.equal(rejected.length, 0);

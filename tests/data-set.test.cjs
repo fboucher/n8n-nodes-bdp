@@ -4,6 +4,35 @@ const { Bdp } = require('../dist/nodes/Bdp/Bdp.node.js');
 const { getDataSets } = require('../dist/nodes/Bdp/resources/dataSet/listSearch.js');
 const { createContext, errorWithStatus, paths } = require('./helpers.cjs');
 
+test('Dataset UI uses one-word terminology', () => {
+	const properties = new Bdp().description.properties;
+	const resource = properties.find((property) => property.name === 'resource');
+	assert.equal(resource.options.find((option) => option.value === 'dataSet').name, 'Dataset');
+
+	const locator = properties.find((property) => property.name === 'dataSetId');
+	assert.equal(locator.displayName, 'Dataset');
+	assert.deepEqual(
+		locator.modes.map((mode) => mode.placeholder),
+		['Select a dataset...', 'Enter a dataset ID'],
+	);
+
+	const operation = properties.find(
+		(property) =>
+			property.name === 'operation' && property.displayOptions?.show?.resource?.includes('dataSet'),
+	);
+	assert.deepEqual(
+		operation.options.map((option) => option.action),
+		['Get many datasets', 'Get a dataset', 'Create a dataset', 'Update a dataset', 'Delete a dataset'],
+	);
+
+	const scope = properties.find(
+		(property) =>
+			property.name === 'measurementScope' &&
+			property.options?.some((option) => option.value === 'dataSet'),
+	);
+	assert.equal(scope.options.find((option) => option.value === 'dataSet').name, 'In Dataset');
+});
+
 test('Data Set List returns native records with filters across pages and per-item links', async () => {
 	const dataSet = { id: 'ds-1', name: 'Energy', type: 'Reporting', metadata: null, active: true };
 	const filters = { name: 'Energy', orderBy: 'NameAscending' };
@@ -51,7 +80,7 @@ test('Data Set Get uses selected or manual IDs', async () => {
 	}
 });
 
-test('Data Set operations only send GET requests and expose no write operation', async () => {
+test('Data Set List and Get only send GET requests; writes are separate operations', async () => {
 	const { context, calls } = createContext(
 		[
 			{ resource: 'dataSet', operation: 'getAll' },
@@ -69,9 +98,9 @@ test('Data Set operations only send GET requests and expose no write operation',
 	const operationProperty = new Bdp().description.properties.find(
 		(p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes('dataSet'),
 	);
-	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById']);
+	assert.deepEqual(operationProperty.options.map(({ value }) => value), ['getAll', 'getById', 'create', 'update', 'delete']);
 
-	for (const operation of ['create', 'update', 'patch', 'post', 'delete']) {
+	for (const operation of ['patch', 'post', 'put']) {
 		const { context: c, calls: rejected } = createContext([{ resource: 'dataSet', operation }], []);
 		await assert.rejects(new Bdp().execute.call(c), /not supported/);
 		assert.equal(rejected.length, 0);
@@ -80,8 +109,8 @@ test('Data Set operations only send GET requests and expose no write operation',
 
 test('Data Set operations reject missing IDs, invalid limits, malformed responses and safe API errors', async () => {
 	for (const [parameters, message] of [
-		[{ operation: 'getById' }, /Data Set ID is required/],
-		[{ operation: 'getById', dataSetId: { mode: 'id', value: ' ' } }, /Data Set ID is required/],
+		[{ operation: 'getById' }, /Dataset ID is required/],
+		[{ operation: 'getById', dataSetId: { mode: 'id', value: ' ' } }, /Dataset ID is required/],
 		[{ operation: 'getAll', limit: 0 }, /positive whole number/],
 	]) {
 		const { context, calls } = createContext([{ resource: 'dataSet', ...parameters }], []);
@@ -90,8 +119,8 @@ test('Data Set operations reject missing IDs, invalid limits, malformed response
 	}
 	for (const [operation, body, message] of [
 		['getAll', {}, /invalid list response/],
-		['getById', [], /invalid data set detail response/],
-		['getById', null, /invalid data set detail response/],
+		['getById', [], /invalid dataset detail response/],
+		['getById', null, /invalid dataset detail response/],
 	]) {
 		const { context } = createContext(
 			[{ resource: 'dataSet', operation, dataSetId: { mode: 'id', value: 'ds-1' } }],
@@ -125,7 +154,7 @@ test('Data Set locator is searchable, pages by name and handles bad responses an
 	]);
 	const first = await getDataSets.call(context, 'Ener');
 	assert.deepEqual(first.results[0], { name: 'Energy (ds-0)', value: 'ds-0' });
-	assert.deepEqual(first.results[1], { name: 'Data Set ds-1', value: 'ds-1' });
+	assert.deepEqual(first.results[1], { name: 'Dataset ds-1', value: 'ds-1' });
 	assert.equal(first.paginationToken, '50');
 	assert.deepEqual(await getDataSets.call(context, 'Ener', first.paginationToken), { results: [], paginationToken: undefined });
 	assert.deepEqual(calls.map(({ qs }) => qs), [
@@ -134,6 +163,6 @@ test('Data Set locator is searchable, pages by name and handles bad responses an
 	]);
 	assert.deepEqual(paths(calls), ['/api/DataSets', '/api/DataSets']);
 	await assert.rejects(getDataSets.call(createContext([{}], []).context, '', '-1'), /pagination token/);
-	await assert.rejects(getDataSets.call(createContext([{}], [{ body: {}, headers: {} }]).context), /invalid data set search response/);
+	await assert.rejects(getDataSets.call(createContext([{}], [{ body: {}, headers: {} }]).context), /invalid dataset search response/);
 	await assert.rejects(getDataSets.call(createContext([{}], [errorWithStatus(403)]).context), /denied access/);
 });

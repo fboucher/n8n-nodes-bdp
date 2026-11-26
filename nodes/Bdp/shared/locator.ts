@@ -1,4 +1,9 @@
-import type { ILoadOptionsFunctions, INodeListSearchResult, INodeProperties } from 'n8n-workflow';
+import type {
+	IDataObject,
+	ILoadOptionsFunctions,
+	INodeListSearchResult,
+	INodeProperties,
+} from 'n8n-workflow';
 import { getBdpRequest } from './transport';
 
 export function createResourceLocator(options: {
@@ -40,6 +45,8 @@ export function createListSearch(options: {
 	label: string;
 	invalidResponseMessage: string;
 	parent?: { parameter: string; path: string; label: string; optional?: boolean };
+	/** Extra server-side filters for the search (for example restricting to writeable points). */
+	extraFilters?: (context: ILoadOptionsFunctions) => IDataObject;
 }) {
 	return async function (
 		this: ILoadOptionsFunctions,
@@ -71,6 +78,7 @@ export function createListSearch(options: {
 			take: 50,
 			skip,
 			...(filter ? { name: filter } : {}),
+			...(options.extraFilters ? options.extraFilters(this) : {}),
 		});
 		if (!Array.isArray(page.data)) throw new Error(options.invalidResponseMessage);
 		const results = page.data.map((record: { id?: string; name?: string | null }) => ({

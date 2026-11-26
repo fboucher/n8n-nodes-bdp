@@ -1,6 +1,6 @@
 # REST operations
 
-The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). All operations are read-only. See the [BDP REST API specification](https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362).
+The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). List, Get, and Historical Values operations are read-only. The operations listed under [Write operations](#write-operations) are the only ones that send writes. See the [BDP REST API specification](https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362).
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |
@@ -25,13 +25,22 @@ The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed
 | Space | Historical Values | Reads history for a space via `GET /api/Spaces/{spaceId}/HistoricalValues`. |
 | Device | Historical Values | Reads history for a device via `GET /api/Devices/{deviceId}/HistoricalValues`. |
 | Device Group | Historical Values | Reads history for a device group via `GET /api/DeviceGroups/{deviceGroupId}/HistoricalValues`. |
+| Device Group | Get On Demand | **Reads live** values from the source system via `POST /api/DeviceGroups/{deviceGroupId}/GetOnDemand`. |
+| Device Group | Set On Demand | **Write.** Sends values to the real source system via `POST /api/DeviceGroups/{deviceGroupId}/SetOnDemand`. Can have physical effects. |
+| Source | Run On Demand | **Write.** Runs a source-specific command via `POST /api/Sources/{sourceId}/OnDemand/{methodName}`. Can have physical effects. |
+| Telemetry | Send | **Write.** Pushes time-series telemetry through the Telemetry Ingress API (`POST /devices/{deviceId}/messages/events`). Uses the separate [Telemetry Ingress credential](credentials.md#bdp-telemetry-ingress-api). |
 | Data Set | List | Lists accessible data sets via `GET /api/DataSets`; optional name and ordering filters. |
 | Data Set | Get | Retrieves the full native record for one selected or manually entered data set ID via `GET /api/DataSets/{dataSetId}`. |
+| Data Set | Create | **Write.** Creates a data set via `POST /api/DataSets`. |
+| Data Set | Update | **Write.** Changes name, expiry, and/or members via `PATCH /api/DataSets/{dataSetId}`. |
+| Data Set | Delete | **Write.** Deletes a data set via `DELETE /api/DataSets/{dataSetId}`. Cannot be undone. |
 | Event Hub | List | Lists configured event hubs via `GET /api/EventHubs`; optional name and ordering filters. Credential-like fields are redacted. |
 | Event Hub | Get | Retrieves one event hub via `GET /api/EventHubs/{eventHubId}` by selected or manually entered ID. Credential-like fields are redacted. |
+| Event Hub | Update | **Write.** Changes partition count, retention policy, consumer groups, and/or telemetry payload format via `PATCH /api/EventHubs/{eventHubId}`. |
 | Measurement Point | List | Lists points in a building (default), on a floor, in a space, on a device, in a device group, or in a data set; optional name, ontology-type, unit, reference ID, metadata, context, writeable, updated-after, commissioned status, and ordering filters. |
 | Measurement Point | Get | Retrieves one point via `GET /api/MeasurementValues/{measurementId}` by selected or manually entered ID. |
 | Measurement Point | Historical Values | Reads history from the dedicated measurement-point endpoint. |
+| Measurement Point | Update | **Write.** Replaces the numeric value of one point (`PATCH /api/MeasurementValues/{measurementId}`) or of many points in a device group (`PATCH /api/DeviceGroups/{deviceGroupId}/MeasurementValues`). See [Write operations](#write-operations). |
 
 For GraphQL queries, see [GraphQL](graphql.md).
 
@@ -69,20 +78,104 @@ Floor **List** requires a Building and calls `GET /api/Buildings/{buildingId}/Fl
 
 Space **List** has a **Scope** of In building (`GET /api/Buildings/{buildingId}/Spaces`) or On floor (`GET /api/Floors/{floorId}/Spaces`). Only the selected scope's parent is shown; to search floors by name, also pick a Building, or enter a Floor ID directly. Space **Get** calls `GET /api/Spaces/{spaceId}`; its selector searches the chosen building or floor, and a manual ID needs no parent. Commissioned Status is a constrained option (Any, Commissioned, Decommissioned).
 
-Source **List** and **Get** only issue GET requests. `POST /api/Sources/{sourceId}/OnDemand/{methodName}` is deliberately out of scope and cannot be sent from this resource.
+Source **List** and **Get** only issue GET requests. **Run On Demand** is a separate operation described under [Write operations](#write-operations).
 
 Device **List** calls `GET /api/Buildings/{id}/Devices`, `/api/Floors/{id}/Devices`, `/api/Spaces/{id}/Devices`, or `/api/Sources/{id}/Devices` depending on **Scope**; only the selected scope's parent selector is shown. Device **Get** calls `GET /api/Devices/{deviceId}`; its selector searches the chosen parent, and a manual ID needs no parent.
 
 Device Group **List** calls `GET /api/Buildings/{id}/DeviceGroups` or `/api/Sources/{id}/DeviceGroups`; **Commissioned Before** and **Decommissioned After** use the same strict ISO 8601 validation and UTC normalization as historical values. Device Group **Get** calls `GET /api/DeviceGroups/{deviceGroupId}`. Only GET requests are issued; `GetOnDemand` and `SetOnDemand` are deliberately out of scope.
 
-Data Set **List** and **Get** only issue GET requests; create, update, and delete are deliberately out of scope.
+Data Set **List** and **Get** only issue GET requests; Create, Update, and Delete are separate operations described under [Write operations](#write-operations).
 
-Event Hub **List** and **Get** only issue GET requests; the PATCH endpoint is deliberately out of scope. **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
+Event Hub **List** and **Get** only issue GET requests; Update is a separate operation described under [Write operations](#write-operations). **Secrets decision:** event hub records may describe a connection to an external messaging service, and the response schema was not available for review. To avoid leaking credentials into execution data and logs, any field at any depth whose name looks like a credential (connection string, secret, password, token, credential, signature, SAS, `key`, or access/primary/secondary/shared/api/private/signing/account/auth key) is returned as `[REDACTED]`; all other fields keep their native values and types. Please review a real response and tighten or relax this rule once the schema is confirmed.
 
-Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. PATCH endpoints are out of scope.
+Measurement Point **List** calls `GET /api/{Buildings|Floors|Spaces|Devices|DeviceGroups|DataSets}/{id}/MeasurementValues` depending on **Scope**; the default In building scope sends exactly the request earlier versions did. Only the selected scope's parent selector is shown, and for Get and Historical Values **Measurement Point Search Scope** controls where the Measurement Point selector searches (manual IDs need no parent). New filters are optional and server-side; omitted ones are not sent. List, Get and Historical Values never write; see Update under [Write operations](#write-operations).
 
 **Historical Values design:** history is an operation on each parent resource (Building, Floor, Space, Device, Device Group, Measurement Point), not a scope of another operation. Select the parent (its selector can be narrowed as for Get), then enter Start and End. They use the same strict ISO 8601 validation with seconds and an explicit UTC offset or Z, UTC normalization, ascending order, Start earlier than End, Return All / Limit, retries, and later-page failure handling as Building history. Existing Building and Measurement Point history are unchanged.
 
+## Write operations
+
+> **Warning: writes can reach physical equipment.** BDP forwards some values to real building systems, and there is no undo. Test on a designated test point or test data first, and use the node's **Continue On Fail** deliberately.
+
+Writes are explicit operations (Update, Create, Delete, Send). No write is reachable from a List, Get, or Historical Values operation, and the GraphQL resource stays read-only. Every write goes through one allowlisted code path (see [Development](development.md#write-operations)).
+
+Common rules:
+
+- **No automatic retry.** A write that fails with a transient error (429, 5xx, a network error) is reported once and is not repeated, because the first attempt may have taken effect. Check the target, then re-run deliberately.
+- **Safe errors.** Messages for failed requests state the HTTP status and what to check. They never include credentials, tokens, or the request body.
+- **Safe per-item write errors.** When a batch write or Set On Demand returns `206 Partial Content`, each failed item may include BDP's error code and a status-derived message. Service-provided error text is not copied into workflow output because it could repeat submitted values.
+- **Validation first.** Inputs are validated before any credential lookup or request.
+
+### Measurement Point: Update
+
+Replaces the numeric `value` of a measurement point. Nothing else can be changed, and measurement points cannot be deleted through this operation. The point must be writeable; the **Only Writeable Points** option (on by default) limits the selector to points that accept writes (`isWriteable`).
+
+**Single mode** writes one value per input item: pick the point (From list or By ID, optionally narrowed by a search scope) and enter the value. It sends one `PATCH /api/MeasurementValues/{measurementId}` with `[{"op":"replace","path":"/value","value":<number>}]` and returns `{ measurementId, value, status: "success", statusCode: 204 }`.
+
+**Batch mode** takes one input item per point and sends one `PATCH /api/DeviceGroups/{deviceGroupId}/MeasurementValues` for the device group. Set **Measurement ID** (a UUID) and **Value** (a number) per item; by default they read `$json.measurementId` and `$json.value`. All items must use the same device group, and a point may appear only once. Every ID and value is validated before the first request.
+
+Batch output has one item per input item, linked to it, with a `status`:
+
+| status | Meaning |
+| --- | --- |
+| `success` | BDP accepted the point (200 or 204, or a 206 that did not list it as failed). |
+| `failed` | BDP returned a per-point error in a `206 Partial Content` response. Includes `statusCode`, `errorCode` (when given), and `error`. Other points in the same request were still applied. |
+| `unconfirmed` | BDP returned `206` without usable per-point details. Verify these points. |
+
+Branch on `status` (for example with an IF node) to handle failed points. A `206` is never reported as full success.
+
+**Batch size.** Inputs larger than 500 points are split into sequential requests of 500; they are never truncated. If a later request fails, the error says how many points were already sent. The 500-point chunk size is a conservative default; the API's real limit still has to be confirmed in UAT.
+
+**Errors.** `400` (unknown point, wrong value type, or point not writeable), `403`, `404`, `413`, `429`, and `504` each produce a short message with the status and no request body.
+
+### Device Group: Set On Demand and Get On Demand
+
+> **Warning: Set On Demand sends a command to the real source system and can have physical effects.** It bypasses stored measurement values and is the highest-risk operation in this node. Test on a designated test point first. It is **never retried automatically**, because a retry after an ambiguous failure (timeout, 504, dropped connection) could repeat a physical action; after such a failure, check the equipment before running it again.
+
+Both operations take **one input item per point** and send **one request per run** for the selected device group. Each item addresses its point with exactly one of **Point ID** or **Point Path** (use expressions to read them from the items); items with both or neither are rejected before any request. A point may appear only once per run, and runs are limited to 500 points: larger inputs are rejected, not truncated or split, so a physical write is never half-applied silently.
+
+**Set On Demand** (`POST /api/DeviceGroups/{deviceGroupId}/SetOnDemand`) sends `[{ "identity": { "id" | "path": ... }, "value": "<text>" }]`. Values are sent as text; numbers and booleans are converted. It returns one item per input item with `status` (`success`, `failed`, or `unconfirmed`), `statusCode`, and for failures `errorCode` and `error`. A `206 Partial Content` response keeps the successful items, marks the failed ones, and is never reported as full success.
+
+**Get On Demand** (`POST /api/DeviceGroups/{deviceGroupId}/GetOnDemand`) sends `[{ "id": ... } | { "path": ... }]` and returns one item per point exactly as BDP reports it (`identity`, `statusCode`, `value`, `timeStamp`, `metadata`), plus a `status` of `success` or `failed` (with `error`/`errorCode` from the metadata). Branch on `status` to handle failed points after a `206`.
+
+Errors: `400`, `403`, `404`, `429`, and `504` produce short messages with the HTTP status; request bodies are never echoed.
+
+### Source: Run On Demand
+
+> **Warning:** Run On Demand sends a command to the real source system and can have physical effects. It is never retried automatically.
+
+`POST /api/Sources/{sourceId}/OnDemand/{methodName}` runs a method on the selected source. **Method Name** is URL-encoded as a single path segment, and **Payload** is sent as JSON. **The payload structure depends on the source and method, and this node does not validate it**; consult the documentation for your source. The response is returned as BDP sent it (an object as is, anything else under `response`), or `{ status: "success" }` when BDP returns nothing. Errors `400`, `403`, `404`, `429`, and `504` produce short messages with the HTTP status and never echo the payload.
+
+### Telemetry: Send
+
+Pushes time-series values from an external system into BDP through the Telemetry Ingress API (version 1.0.1), which is separate from the v3 API: its own host, its own [credential](credentials.md#bdp-telemetry-ingress-api), and its own payload. The v3 `/api/` path guard is unaffected.
+
+Set the **Source ID** (UUID) and **Point Group Reference ID** once, then provide one input item per reading with a **Point Reference ID**, a **Timestamp**, and a **Value**; use expressions to read them from each item. The node sets `ProtocolVersion` (`1.0`), `NotificationType` (`TimeSeries`), and `GeneratedAt` (now, in UTC) itself.
+
+- **Validation first.** The source ID must be a UUID. Timestamps must be ISO 8601 with seconds and an explicit UTC offset or `Z`, and are sent in UTC. Values must be a boolean, a finite number, text, or (with **Value Type** Date-Time) a UTC timestamp. **Value Type** (Automatic, Boolean, Date-Time, Number, Text, Whole Number) decides how each input value is interpreted; Automatic sends it as it is. All of this runs before the credential is read or anything is sent.
+- **Message size.** BDP recommends at most 4 KB per message (roughly ten points). The node splits larger inputs into several messages of at most 4096 bytes, never truncates, and rejects a single point that cannot fit. One run sends at most 200 messages (the per-device rate limit is 200 messages per second); a larger input is rejected with nothing sent. The 4 KB figure is the documented recommendation; whether the hub accepts larger messages still has to be confirmed in UAT.
+- **Never retried.** A timeout or 5xx is reported once, because the message may already have been delivered. To avoid duplicates, make the point and timestamp the deduplication key: before re-sending after an ambiguous failure, check whether BDP already has that point and timestamp (for example with Measurement Point Historical Values), or make downstream consumers ignore repeated `(PointReferenceId, Timestamp)` pairs.
+- **Silent drops.** BDP drops messages whose `SourceId`, point group, or point IDs it does not know or that are not commissioned, **without an error**. The output `status` of `accepted` means the hub accepted the message, not that BDP ingested the point; verify new setups by reading the point back.
+- **Output.** One item per input item, linked to it, with `pointReferenceId`, `timestamp`, `value`, `status: "accepted"`, and the `message` number it was sent in.
+- **Errors.** A `400` includes the platform error code (`x-ms-error-code`) when it is a short identifier. `401` explains that the token may be expired or invalid, or the Device ID does not match (it is case-sensitive). Messages never include the SAS token, the payload, or the response.
+
+### Data Set: Create, Update, Delete
+
+**Create** (`POST /api/DataSets`) needs **Name**, **Expires On**, and **Members**. Expires On uses the same strict ISO 8601 validation as other timestamps (seconds and an explicit UTC offset or `Z`) and is sent in UTC. Members is JSON listing member IDs (UUIDs) by category: `buildings`, `floors`, `spaces`, `devices`, `measurementValues`; categories you leave out are sent as empty lists. All three are validated before any request, and the created data set is returned as BDP sent it. **Create is never retried**, because a repeat could create a second data set; to avoid duplicates after an ambiguous failure, look the data set up by name first.
+
+**Update** (`PATCH /api/DataSets/{dataSetId}`) lets you change any combination of name, expiry, and members, and sends one `replace` operation per field you set. Setting no field is rejected. **Members are replaced as a whole**: the API does not support partial member edits, so the members you provide become the complete list, and categories you omit become empty. Read the data set first (Data Set Get) if you want to add to the existing members.
+
+**Delete** (`DELETE /api/DataSets/{dataSetId}`) removes the selected or manually entered data set and returns `{ id, status: "deleted" }`. **Deletion cannot be undone.** Delete is not retried.
+
+Errors: `400`, `404`, `413` (too large), and `424` (a referenced device or ID failed) produce short messages with the HTTP status and no request body.
+
+### Event Hub: Update
+
+`PATCH /api/EventHubs/{eventHubId}` replaces any combination of **Partition Count** (a whole number), **Retention Policy** (text), **Consumer Groups** (comma-separated names, replacing the whole list), and **Telemetry Payload Format** (text). One `replace` is sent per field you set; setting none is rejected, and types are checked before any request.
+
+> **Warning:** event hub changes affect every downstream consumer of its telemetry. BDP may reject reductions of partitions or retention; that returns a safe `400` message without the request body.
+
+The response is returned as a native record with the same redaction rule as List and Get (credential-like fields become `[REDACTED]`; see the secrets decision above).
+
 ## Out of scope
 
-The node does not provide generic HTTP requests, writes, commands, subscriptions, enrichment, cursors, or exactly-once guarantees.
+The node does not provide generic HTTP requests, GraphQL mutations, subscriptions, enrichment, cursors, or exactly-once guarantees.

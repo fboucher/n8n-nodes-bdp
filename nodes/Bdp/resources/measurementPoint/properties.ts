@@ -15,13 +15,25 @@ const listShow: Show = { resource: ['measurementValue'], operation: ['getAll'] }
 // Get and Historical Values only use a parent to narrow the Measurement Point selector.
 const selectShow: Show = { resource: ['measurementValue'], operation: ['getById', 'getHistorical'] };
 
+// Update (single mode) uses the same selector as Get, narrowed by a parent; batch targets a device group.
+const updateSingleShow: Show = {
+	resource: ['measurementValue'],
+	operation: ['update'],
+	updateMode: ['single'],
+};
+const updateBatchShow: Show = {
+	resource: ['measurementValue'],
+	operation: ['update'],
+	updateMode: ['batch'],
+};
+
 const scopeOptions = [
 	{ name: 'In Building', value: 'building' },
 	{ name: 'On Floor', value: 'floor' },
 	{ name: 'In Space', value: 'space' },
 	{ name: 'On Device', value: 'device' },
 	{ name: 'In Device Group', value: 'deviceGroup' },
-	{ name: 'In Data Set', value: 'dataSet' },
+	{ name: 'In Dataset', value: 'dataSet' },
 ];
 
 export const measurementBuildingResource: INodeProperties = {
@@ -67,28 +79,39 @@ export const measurementScopeProperties: INodeProperties[] = [
 		description:
 			'Choose the parent the Measurement Point selector searches; not needed when entering a Measurement Point ID',
 	},
+	{
+		displayName: 'Measurement Point Search Scope',
+		name: 'measurementScope',
+		type: 'options',
+		options: scopeOptions,
+		default: 'building',
+		displayOptions: { show: updateSingleShow },
+		description:
+			'Choose the parent the Measurement Point selector searches; not needed when entering a Measurement Point ID',
+	},
 	measurementBuildingResource,
+	{
+		...measurementBuildingResource,
+		displayOptions: { show: { ...updateSingleShow, measurementScope: ['building'] } },
+	},
 	...parentSelectors(listShow, true),
 	...parentSelectors(selectShow, false),
+	...parentSelectors(updateSingleShow, false),
 ];
 
-export const measurementResource: INodeProperties = {
+const measurementLocator = (show: Show): INodeProperties => ({
 	...createResourceLocator({
 		displayName: 'Measurement Point',
 		name: 'measurementId',
 		searchMethod: 'getMeasurementValues',
 		listPlaceholder: 'Select a measurement point...',
 		idPlaceholder: 'Enter a measurement point ID',
-		displayOptions: {
-			show: {
-				operation: ['getById', 'getHistorical'],
-				resource: ['measurementValue'],
-			},
-		},
+		displayOptions: { show },
 	}),
 	typeOptions: {
 		loadOptionsDependsOn: [
 			'measurementScope',
+			'writeableOnly',
 			'buildingId.value',
 			'floorId.value',
 			'spaceId.value',
@@ -97,7 +120,81 @@ export const measurementResource: INodeProperties = {
 			'dataSetId.value',
 		],
 	},
-};
+});
+
+export const measurementResource: INodeProperties = measurementLocator({
+	operation: ['getById', 'getHistorical'],
+	resource: ['measurementValue'],
+});
+
+const writeWarning =
+	'Writes can reach physical equipment. Test on a designated test point first; BDP does not offer undo.';
+
+export const measurementUpdateProperties: INodeProperties[] = [
+	{
+		displayName: writeWarning,
+		name: 'updateWarning',
+		type: 'notice',
+		default: '',
+		displayOptions: { show: { resource: ['measurementValue'], operation: ['update'] } },
+	},
+	{
+		displayName: 'Mode',
+		name: 'updateMode',
+		type: 'options',
+		options: [
+			{ name: 'Single', value: 'single', description: 'Write one value to one measurement point per input item' },
+			{
+				name: 'Batch',
+				value: 'batch',
+				description: 'Write one value per input item to points in a device group, in one request',
+			},
+		],
+		default: 'single',
+		displayOptions: { show: { resource: ['measurementValue'], operation: ['update'] } },
+	},
+	measurementLocator(updateSingleShow),
+	{
+		displayName: 'Only Writeable Points',
+		name: 'writeableOnly',
+		type: 'boolean',
+		default: true,
+		displayOptions: { show: updateSingleShow },
+		description: 'Whether the Measurement Point selector only lists points that accept writes',
+	},
+	{
+		displayName: 'Value',
+		name: 'pointValue',
+		type: 'number',
+		required: true,
+		default: 0,
+		displayOptions: { show: updateSingleShow },
+		description: 'The new numeric value to write to the measurement point',
+	},
+	...deviceGroupChain(updateBatchShow, true),
+	{
+		displayName: 'Measurement ID',
+		name: 'batchMeasurementId',
+		type: 'string',
+		required: true,
+		default: '={{ $json.measurementId }}',
+		displayOptions: { show: updateBatchShow },
+		description:
+			'UUID of the measurement point for each input item. Points must belong to the selected device group.',
+	},
+	{
+		displayName: 'Value',
+		name: 'batchValue',
+		type: 'number',
+		required: true,
+		// An expression default so each input item supplies its own value.
+		// eslint-disable-next-line n8n-nodes-base/node-param-default-wrong-for-number
+		default: '={{ $json.value }}',
+		displayOptions: { show: updateBatchShow },
+		description:
+			'The new numeric value for each input item. Up to 500 points are sent per request; larger inputs are split into several requests.',
+	},
+];
 
 export const measurementOperation: INodeProperties = {
 	displayName: 'Operation',
@@ -113,6 +210,7 @@ export const measurementOperation: INodeProperties = {
 			value: 'getHistorical',
 			action: 'Get measurement point history',
 		},
+		{ name: 'Update', value: 'update', action: 'Update a measurement point value' },
 	],
 	default: 'getAll',
 };
