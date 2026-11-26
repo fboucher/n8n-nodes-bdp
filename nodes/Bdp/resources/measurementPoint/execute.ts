@@ -25,7 +25,7 @@ export const measurementScopes: Record<string, { path: string; parameter: string
 		space: { path: 'Spaces', parameter: 'spaceId', label: 'Space' },
 		device: { path: 'Devices', parameter: 'deviceId', label: 'Device' },
 		deviceGroup: { path: 'DeviceGroups', parameter: 'deviceGroupId', label: 'Device Group' },
-		dataSet: { path: 'DataSets', parameter: 'dataSetId', label: 'Data Set' },
+		dataSet: { path: 'DataSets', parameter: 'dataSetId', label: 'Dataset' },
 	};
 
 export async function executeMeasurementPoint(

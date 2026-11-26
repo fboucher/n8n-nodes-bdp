@@ -104,7 +104,7 @@ test('Measurement Point operations reject missing inputs and invalid limits with
 		[{ operation: 'getAll' }, /Building ID is required/],
 		...scopes.slice(1).map(([measurementScope, , ]) => [{ operation: 'getAll', measurementScope }, /ID is required/]),
 		[{ operation: 'getAll', measurementScope: 'floor', buildingId: id('b-1') }, /Floor ID is required/],
-		[{ operation: 'getAll', measurementScope: 'dataSet', dataSetId: id(' ') }, /Data Set ID is required/],
+		[{ operation: 'getAll', measurementScope: 'dataSet', dataSetId: id(' ') }, /Dataset ID is required/],
 		[{ operation: 'getAll', measurementScope: 'site', buildingId: id('b-1') }, /supported measurement-point scope/],
 		[{ operation: 'getAll', buildingId: id('b-1'), limit: 0 }, /positive whole number/],
 		[{ operation: 'getById' }, /Measurement point ID is required/],
@@ -174,7 +174,7 @@ test('Measurement Point locator follows the selected scope and defaults to the b
 test('Measurement Point locator rejects missing parents, bad scope, tokens, bad responses and API errors', async () => {
 	for (const [measurementScope, parameter, label] of [
 		['building', 'buildingId', 'building'], ['floor', 'floorId', 'floor'], ['space', 'spaceId', 'space'],
-		['device', 'deviceId', 'device'], ['deviceGroup', 'deviceGroupId', 'device group'], ['dataSet', 'dataSetId', 'data set'],
+		['device', 'deviceId', 'device'], ['deviceGroup', 'deviceGroupId', 'device group'], ['dataSet', 'dataSetId', 'dataset'],
 	]) {
 		for (const value of ['', ' ', '={{ $json.id }}']) {
 			const { context, calls } = createContext([{ measurementScope, [parameter]: id(value) }], []);

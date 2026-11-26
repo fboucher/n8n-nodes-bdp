@@ -21,7 +21,7 @@ const searchers: Record<string, ReturnType<typeof searchFor>> = {
 	space: searchFor('spaceId', 'Spaces', 'space'),
 	device: searchFor('deviceId', 'Devices', 'device'),
 	deviceGroup: searchFor('deviceGroupId', 'DeviceGroups', 'device group'),
-	dataSet: searchFor('dataSetId', 'DataSets', 'data set'),
+	dataSet: searchFor('dataSetId', 'DataSets', 'dataset'),
 };
 
 export async function getMeasurementValues(

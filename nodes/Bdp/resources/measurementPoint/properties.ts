@@ -33,7 +33,7 @@ const scopeOptions = [
 	{ name: 'In Space', value: 'space' },
 	{ name: 'On Device', value: 'device' },
 	{ name: 'In Device Group', value: 'deviceGroup' },
-	{ name: 'In Data Set', value: 'dataSet' },
+	{ name: 'In Dataset', value: 'dataSet' },
 ];
 
 export const measurementBuildingResource: INodeProperties = {

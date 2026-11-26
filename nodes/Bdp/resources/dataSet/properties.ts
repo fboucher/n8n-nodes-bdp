@@ -4,11 +4,11 @@ import { createResourceLocator } from '../../shared/locator';
 const listShow = { resource: ['dataSet'], operation: ['getAll'] };
 
 export const dataSetResource: INodeProperties = createResourceLocator({
-	displayName: 'Data Set',
+	displayName: 'Dataset',
 	name: 'dataSetId',
 	searchMethod: 'getDataSets',
-	listPlaceholder: 'Select a data set...',
-	idPlaceholder: 'Enter a data set ID',
+	listPlaceholder: 'Select a dataset...',
+	idPlaceholder: 'Enter a dataset ID',
 	displayOptions: { show: { resource: ['dataSet'], operation: ['getById', 'update', 'delete'] } },
 });
 
@@ -22,11 +22,11 @@ export const dataSetOperation: INodeProperties = {
 	// eslint-disable-next-line n8n-nodes-base/node-param-options-type-unsorted-items
 	options: [
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
-		{ name: 'List', value: 'getAll', action: 'Get many data sets' },
-		{ name: 'Get', value: 'getById', action: 'Get a data set' },
-		{ name: 'Create', value: 'create', action: 'Create a data set' },
-		{ name: 'Update', value: 'update', action: 'Update a data set' },
-		{ name: 'Delete', value: 'delete', action: 'Delete a data set' },
+		{ name: 'List', value: 'getAll', action: 'Get many datasets' },
+		{ name: 'Get', value: 'getById', action: 'Get a dataset' },
+		{ name: 'Create', value: 'create', action: 'Create a dataset' },
+		{ name: 'Update', value: 'update', action: 'Update a dataset' },
+		{ name: 'Delete', value: 'delete', action: 'Delete a dataset' },
 	],
 	default: 'getAll',
 };
@@ -37,7 +37,7 @@ export const dataSetFilters: INodeProperties[] = [
 	...filter,
 	default: '',
 	displayOptions: { show: listShow },
-	description: `Filter or order data sets by ${filter.displayName.toLowerCase()}`,
+	description: `Filter or order datasets by ${filter.displayName.toLowerCase()}`,
 }));
 
 export const dataSetPaginationProperties: INodeProperties[] = [
@@ -71,7 +71,7 @@ const membersDefault = JSON.stringify(
 
 export const dataSetWriteProperties: INodeProperties[] = [
 	{
-		displayName: 'Deleting a data set cannot be undone. Test on a throwaway data set first.',
+		displayName: 'Deleting a dataset cannot be undone. Test on a throwaway dataset first.',
 		name: 'dataSetDeleteNotice',
 		type: 'notice',
 		default: '',
@@ -84,7 +84,7 @@ export const dataSetWriteProperties: INodeProperties[] = [
 		required: true,
 		default: '',
 		displayOptions: { show: createShow },
-		description: 'Name of the new data set',
+		description: 'Name of the new dataset',
 	},
 	{
 		displayName: 'Expires On',
@@ -94,7 +94,7 @@ export const dataSetWriteProperties: INodeProperties[] = [
 		default: '',
 		placeholder: '2026-12-31T00:00:00Z',
 		displayOptions: { show: createShow },
-		description: 'When the data set expires: ISO 8601 with seconds and an explicit UTC offset or Z',
+		description: 'When the dataset expires: ISO 8601 with seconds and an explicit UTC offset or Z',
 	},
 	{
 		displayName: 'Members',
@@ -136,7 +136,7 @@ export const dataSetWriteProperties: INodeProperties[] = [
 				name: 'name',
 				type: 'string',
 				default: '',
-				description: 'The new name of the data set',
+				description: 'The new name of the dataset',
 			},
 		],
 	},

@@ -35,7 +35,7 @@ export async function executeDataSet(
 		return fetchAllPages(request, '/api/DataSets', filters, page);
 	}
 	if (operation === 'getById') {
-		const id = requiredId(context, itemIndex, 'dataSetId', 'Data Set');
+		const id = requiredId(context, itemIndex, 'dataSetId', 'Dataset');
 		const response = await request(`/api/DataSets/${encodeURIComponent(id)}`, {});
 		if (
 			typeof response.data !== 'object' ||
@@ -44,7 +44,7 @@ export async function executeDataSet(
 		) {
 			throw new NodeOperationError(
 				context.getNode(),
-				'BDP returned an invalid data set detail response.',
+				'BDP returned an invalid dataset detail response.',
 			);
 		}
 		return [response.data as IDataObject];
@@ -66,7 +66,7 @@ export async function executeDataSet(
 		return [recordOrStatus(result, { name: body.name as string, status: 'created' })];
 	}
 	if (operation === 'update') {
-		const id = requiredId(context, itemIndex, 'dataSetId', 'Data Set');
+		const id = requiredId(context, itemIndex, 'dataSetId', 'Dataset');
 		const fields = context.getNodeParameter('dataSetUpdateFields', itemIndex, {}) as IDataObject;
 		const changes = ['name', 'expiresOn', 'members']
 			.filter((field) => Object.prototype.hasOwnProperty.call(fields, field))
@@ -83,7 +83,7 @@ export async function executeDataSet(
 		return [recordOrStatus(result, { id, status: 'updated' })];
 	}
 	if (operation === 'delete') {
-		const id = requiredId(context, itemIndex, 'dataSetId', 'Data Set');
+		const id = requiredId(context, itemIndex, 'dataSetId', 'Dataset');
 		const result = await requestBdpWrite.call(context, {
 			resource: 'dataSet',
 			operation: 'delete',
