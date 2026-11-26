@@ -55,7 +55,7 @@ export async function executeDataSet(
 			expiresOn: validateExpiresOn(context.getNodeParameter('dataSetExpiresOn', itemIndex, '')),
 			members: validateMembers(context.getNodeParameter('dataSetMembers', itemIndex, '{}')),
 		};
-		// Never retried: a repeated create could make a second data set.
+		// Never retried: a repeated create could make a second dataset.
 		const result = await requestBdpWrite.call(context, {
 			resource: 'dataSet',
 			operation: 'create',

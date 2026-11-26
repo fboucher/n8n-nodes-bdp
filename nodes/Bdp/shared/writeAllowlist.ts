@@ -37,7 +37,7 @@ export const WRITE_ALLOWLIST: readonly WriteOperationSpec[] = [
 		path: new RegExp(`^/api/DeviceGroups/${ID}/MeasurementValues$`),
 		idempotent: true,
 	},
-	// Data Set -> Create, Update, Delete. Create and Delete are never retried.
+	// Dataset -> Create, Update, Delete. Create and Delete are never retried.
 	{
 		resource: 'dataSet',
 		operation: 'create',

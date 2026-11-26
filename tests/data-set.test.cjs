@@ -33,7 +33,7 @@ test('Dataset UI uses one-word terminology', () => {
 	assert.equal(scope.options.find((option) => option.value === 'dataSet').name, 'In Dataset');
 });
 
-test('Data Set List returns native records with filters across pages and per-item links', async () => {
+test('Dataset List returns native records with filters across pages and per-item links', async () => {
 	const dataSet = { id: 'ds-1', name: 'Energy', type: 'Reporting', metadata: null, active: true };
 	const filters = { name: 'Energy', orderBy: 'NameAscending' };
 	const { context, calls } = createContext(
@@ -62,13 +62,13 @@ test('Data Set List returns native records with filters across pages and per-ite
 	]);
 });
 
-test('Data Set List defaults to Limit 100, omits empty filters and returns no items when empty', async () => {
+test('Dataset List defaults to Limit 100, omits empty filters and returns no items when empty', async () => {
 	const { context, calls } = createContext([{ resource: 'dataSet', operation: 'getAll', name: '' }], [{ body: [], headers: {} }]);
 	assert.deepEqual(await new Bdp().execute.call(context), [[]]);
 	assert.deepEqual(calls[0].qs, { take: 100, skip: 0 });
 });
 
-test('Data Set Get uses selected or manual IDs', async () => {
+test('Dataset Get uses selected or manual IDs', async () => {
 	for (const mode of ['list', 'id']) {
 		const dataSet = { id: 'ds/1', type: 'Reporting', metadata: { a: null } };
 		const { context, calls } = createContext(
@@ -80,7 +80,7 @@ test('Data Set Get uses selected or manual IDs', async () => {
 	}
 });
 
-test('Data Set List and Get only send GET requests; writes are separate operations', async () => {
+test('Dataset List and Get only send GET requests; writes are separate operations', async () => {
 	const { context, calls } = createContext(
 		[
 			{ resource: 'dataSet', operation: 'getAll' },
@@ -107,7 +107,7 @@ test('Data Set List and Get only send GET requests; writes are separate operatio
 	}
 });
 
-test('Data Set operations reject missing IDs, invalid limits, malformed responses and safe API errors', async () => {
+test('Dataset operations reject missing IDs, invalid limits, malformed responses and safe API errors', async () => {
 	for (const [parameters, message] of [
 		[{ operation: 'getById' }, /Dataset ID is required/],
 		[{ operation: 'getById', dataSetId: { mode: 'id', value: ' ' } }, /Dataset ID is required/],
@@ -141,7 +141,7 @@ test('Data Set operations reject missing IDs, invalid limits, malformed response
 	}
 });
 
-test('Data Set locator is searchable, pages by name and handles bad responses and errors', async () => {
+test('Dataset locator is searchable, pages by name and handles bad responses and errors', async () => {
 	const locator = new Bdp().description.properties.find((p) => p.name === 'dataSetId');
 	assert.equal(locator.modes[0].typeOptions.searchListMethod, 'getDataSets');
 	assert.equal(locator.modes[0].typeOptions.searchable, true);

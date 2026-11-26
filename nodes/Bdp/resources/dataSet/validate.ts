@@ -27,8 +27,8 @@ function parseJson(text: string): unknown {
 }
 
 /**
- * Data set members are always replaced as a whole. Missing categories become empty lists so
- * the request states exactly what the data set will contain; unknown categories and
+ * Dataset members are always replaced as a whole. Missing categories become empty lists so
+ * the request states exactly what the dataset will contain; unknown categories and
  * non-UUID IDs are rejected.
  */
 export const validateMembers: PatchValidator = (value) => {

@@ -9,7 +9,7 @@ const U1 = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 const U2 = '3f2504e0-4f89-41d3-9a0c-0305e82c3302';
 const allMembers = (extra = {}) => ({ buildings: [], floors: [], spaces: [], devices: [], measurementValues: [], ...extra });
 
-// ---------------------------------------------------------------- Data Set
+// ---------------------------------------------------------------- Dataset
 
 const create = (extra = {}) => ({
 	resource: 'dataSet',
@@ -20,7 +20,7 @@ const create = (extra = {}) => ({
 	...extra,
 });
 
-test('Data Set Create posts name, normalized expiry and complete members, and returns the native record', async () => {
+test('Dataset Create posts name, normalized expiry and complete members, and returns the native record', async () => {
 	const created = { id: 'ds-1', name: 'Energy', expiresOn: '2026-12-31T00:00:00Z', members: allMembers({ buildings: [U1] }) };
 	const { context, calls } = createContext([create()], [{ body: created, statusCode: 200, headers: {} }]);
 	const [output] = await new Bdp().execute.call(context);
@@ -36,7 +36,7 @@ test('Data Set Create posts name, normalized expiry and complete members, and re
 	});
 });
 
-test('Data Set Create accepts members as JSON text', async () => {
+test('Dataset Create accepts members as JSON text', async () => {
 	const { context, calls } = createContext(
 		[create({ dataSetMembers: JSON.stringify({ devices: [U2] }) })],
 		[{ body: { id: 'ds-1' }, statusCode: 200, headers: {} }],
@@ -45,13 +45,13 @@ test('Data Set Create accepts members as JSON text', async () => {
 	assert.deepEqual(calls[0].body.members, allMembers({ devices: [U2] }));
 });
 
-test('Data Set Create still reports success when BDP returns no record', async () => {
+test('Dataset Create still reports success when BDP returns no record', async () => {
 	const { context } = createContext([create()], [{ body: undefined, statusCode: 200, headers: {} }]);
 	const [output] = await new Bdp().execute.call(context);
 	assert.deepEqual(output[0].json, { name: 'Energy', status: 'created', statusCode: 200 });
 });
 
-test('Data Set Create validates name, expiry and members before any request', async () => {
+test('Dataset Create validates name, expiry and members before any request', async () => {
 	for (const [extra, message] of [
 		[{ dataSetName: '  ' }, /Name must be a non-empty/],
 		[{ dataSetName: 5 }, /Name must be a non-empty/],
@@ -78,7 +78,7 @@ test('Data Set Create validates name, expiry and members before any request', as
 	}
 });
 
-test('Data Set Create is never retried, even on transient failures', async () => {
+test('Dataset Create is never retried, even on transient failures', async () => {
 	for (const error of [errorWithStatus(503, { 'retry-after': '0' }), errorWithStatus(429, { 'retry-after': '0' }), Object.assign(new Error('x'), { code: 'ECONNRESET' })]) {
 		const { context, calls } = createContext([create()], [error, { body: { id: 'dup' }, statusCode: 200, headers: {} }]);
 		await assert.rejects(new Bdp().execute.call(context));
@@ -94,7 +94,7 @@ const update = (fields, extra = {}) => ({
 	...extra,
 });
 
-test('Data Set Update builds one replace operation per changed field', async () => {
+test('Dataset Update builds one replace operation per changed field', async () => {
 	const updated = { id: 'ds/1', name: 'New' };
 	const { context, calls } = createContext(
 		[update({ name: 'New', expiresOn: '2027-01-01T00:00:00Z', members: { floors: [U1] } })],
@@ -112,7 +112,7 @@ test('Data Set Update builds one replace operation per changed field', async () 
 	]);
 });
 
-test('Data Set Update sends only the fields that changed, and replaces members as a whole', async () => {
+test('Dataset Update sends only the fields that changed, and replaces members as a whole', async () => {
 	let { context, calls } = createContext([update({ name: 'Only' })], [{ body: { id: 'x' }, statusCode: 200, headers: {} }]);
 	await new Bdp().execute.call(context);
 	assert.deepEqual(calls[0].body, [{ op: 'replace', path: '/name', value: 'Only' }]);
@@ -123,7 +123,7 @@ test('Data Set Update sends only the fields that changed, and replaces members a
 	assert.ok(calls[0].body.every(({ path }) => !path.startsWith('/members/')));
 });
 
-test('Data Set Update rejects no changes, bad values and missing IDs before any request', async () => {
+test('Dataset Update rejects no changes, bad values and missing IDs before any request', async () => {
 	for (const [parameters, message] of [
 		[update({}), /Nothing to update/],
 		[update({ unknown: 'x' }), /Nothing to update/],
@@ -138,7 +138,7 @@ test('Data Set Update rejects no changes, bad values and missing IDs before any 
 	}
 });
 
-test('Data Set Update properties describe whole-member replacement and offer no partial member edits', () => {
+test('Dataset Update properties describe whole-member replacement and offer no partial member edits', () => {
 	const property = new Bdp().description.properties.find((p) => p.name === 'dataSetUpdateFields');
 	const members = property.options.find((o) => o.name === 'members');
 	assert.match(members.displayName, /Replaces All Members/);
@@ -146,7 +146,7 @@ test('Data Set Update properties describe whole-member replacement and offer no 
 	assert.deepEqual(property.options.map(({ name }) => name).sort(), ['expiresOn', 'members', 'name']);
 });
 
-test('Data Set Delete targets only the selected or entered ID and confirms the deletion', async () => {
+test('Dataset Delete targets only the selected or entered ID and confirms the deletion', async () => {
 	for (const mode of ['list', 'id']) {
 		const { context, calls } = createContext(
 			[{ resource: 'dataSet', operation: 'delete', dataSetId: ref('ds/1', mode) }],
@@ -165,7 +165,7 @@ test('Data Set Delete targets only the selected or entered ID and confirms the d
 	assert.equal(calls.length, 0);
 });
 
-test('Data Set Delete is not retried and its notice says deletion cannot be undone', async () => {
+test('Dataset Delete is not retried and its notice says deletion cannot be undone', async () => {
 	const { context, calls } = createContext(
 		[{ resource: 'dataSet', operation: 'delete', dataSetId: ref('ds-1') }],
 		[errorWithStatus(503, { 'retry-after': '0' }), { body: undefined, statusCode: 200, headers: {} }],
@@ -176,7 +176,7 @@ test('Data Set Delete is not retried and its notice says deletion cannot be undo
 	assert.match(notice.displayName, /cannot be undone/);
 });
 
-test('Data Set writes map 400, 404, 413 and 424 to safe messages without echoing bodies', async () => {
+test('Dataset writes map 400, 404, 413 and 424 to safe messages without echoing bodies', async () => {
 	const cases = [
 		[update({ name: 'secret-name-value' }), [400, 404, 413, 424]],
 		[create({ dataSetName: 'secret-name-value' }), [400, 413, 424]],
@@ -195,7 +195,7 @@ test('Data Set writes map 400, 404, 413 and 424 to safe messages without echoing
 	}
 });
 
-test('Data Set List and Get remain GET-only next to the writes', async () => {
+test('Dataset List and Get remain GET-only next to the writes', async () => {
 	for (const parameters of [
 		{ resource: 'dataSet', operation: 'getAll' },
 		{ resource: 'dataSet', operation: 'getById', dataSetId: ref('ds-1') },
