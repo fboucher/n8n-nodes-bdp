@@ -1,6 +1,6 @@
 # Credentials
 
-The node authenticates to Schneider Electric EcoStruxure **Building Data Platform (BDP)** with a **BDP Community OAuth2 API** credential, shared by the REST and GraphQL operations. The Telemetry **Send** operation uses a second, separate credential, [BDP Telemetry Ingress API](#bdp-telemetry-ingress-api).
+The node authenticates to Schneider Electric EcoStruxure **Building Data Platform (BDP)** with a **BDP Community OAuth2 API** credential, shared by the REST and GraphQL operations. The authentication section of the [BDP REST API specification](https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362) describes how access is granted. The Telemetry **Send** operation uses a second, separate credential, [BDP Telemetry Ingress API](#bdp-telemetry-ingress-api).
 
 ## Setup
 

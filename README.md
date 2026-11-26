@@ -88,6 +88,11 @@ Having trouble? See [Troubleshooting](docs/troubleshooting.md).
 ## Resources
 
 - [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
+- BDP API reference (Access / Egress):
+  - [REST API](https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362)
+  - [GraphQL API](https://exchange.se.com/devportal/?api=bdp-graphql-api-spec-v1&id=122362)
+- BDP API reference (Ingress / Data Provider), used by Telemetry Send:
+  - [REST API](https://exchange.se.com/devportal/?api=bdp-ingress-api-spec-v1-bundle&id=894350)
 - [Report an issue](https://github.com/fboucher/n8n-nodes-bdp/issues)
 
 ## License

@@ -4,6 +4,8 @@
 
 Requests use authenticated JSON POST with `Accept: application/json` and `Content-Type: application/json`. The REST-only `X-Api-Version: 3.0` header is not sent. A successful REST credential test alone does not establish GraphQL permission, so confirm access in your environment.
 
+See the [BDP GraphQL API specification](https://exchange.se.com/devportal/?api=bdp-graphql-api-spec-v1&id=122362) for the schema.
+
 ## Authoring queries
 
 Author against the **existing BDP GraphQL explorer** supplied by your administrator. Confirm field names, relationships, scalar types, filters, permissions, and server limits there. The node does not introspect, cache, or ship a schema. The examples below are synthetic templates, not live UAT evidence.

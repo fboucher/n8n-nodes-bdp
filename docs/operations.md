@@ -1,6 +1,6 @@
 # REST operations
 
-The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). List, Get, and Historical Values operations are read-only. The operations listed under [Write operations](#write-operations) are the only ones that send writes.
+The node reads from **Building Data Platform (BDP)** REST API v3.0 using a fixed UAT or Production host selected by the [credential](credentials.md). List, Get, and Historical Values operations are read-only. The operations listed under [Write operations](#write-operations) are the only ones that send writes. See the [BDP REST API specification](https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362).
 
 | Resource | Operation | Behavior |
 | --- | --- | --- |

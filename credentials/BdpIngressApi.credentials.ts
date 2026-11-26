@@ -11,7 +11,7 @@ export class BdpIngressApi implements ICredentialType {
 
 	icon: Icon = { light: 'file:../icons/bdp.svg', dark: 'file:../icons/bdp.svg' };
 
-	documentationUrl = 'https://github.com/fboucher/n8n-nodes-bdp#credentials';
+	documentationUrl = 'https://exchange.se.com/devportal/?api=bdp-ingress-api-spec-v1-bundle&id=894350';
 
 	properties: INodeProperties[] = [
 		{
