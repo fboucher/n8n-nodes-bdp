@@ -235,7 +235,30 @@ export class Bdp implements INodeType {
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
 		credentials: [
-			{ name: 'bdpOAuth2Api', required: true, displayOptions: { hide: { resource: ['telemetry'] } } },
+			{
+				name: 'bdpOAuth2Api',
+				required: true,
+				// Listed with `show` (not `hide`) so the n8n linter can see the two credentials
+				// are mutually exclusive. Keep in sync with the resource options.
+				displayOptions: {
+					show: {
+						resource: [
+							'building',
+							'dataSet',
+							'device',
+							'deviceGroup',
+							'eventHub',
+							'floor',
+							'graphql',
+							'measurementValue',
+							'organization',
+							'site',
+							'source',
+							'space',
+						],
+					},
+				},
+			},
 			{
 				name: 'bdpIngressApi',
 				required: true,
