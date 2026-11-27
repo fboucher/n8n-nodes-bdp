@@ -242,10 +242,12 @@ test('the v3 transport still rejects non-API paths and the Telemetry resource ex
 	const operation = description.properties.find((p) => p.name === 'operation' && p.displayOptions?.show?.resource?.includes('telemetry'));
 	assert.deepEqual(operation.options.map(({ value }) => value), ['send']);
 	assert.ok(description.properties.find((p) => p.name === 'resource').options.some((o) => o.value === 'telemetry'));
-	assert.deepEqual(
-		description.credentials.map(({ name, displayOptions }) => [name, Object.keys(displayOptions)[0]]),
-		[['bdpOAuth2Api', 'hide'], ['bdpIngressApi', 'show']],
-	);
+	// Each resource must show exactly one credential (the n8n linter requires mutually exclusive `show` rules).
+	assert.deepEqual(description.credentials.map(({ displayOptions }) => Object.keys(displayOptions)), [['show'], ['show']]);
+	for (const { value } of description.properties.find((p) => p.name === 'resource').options) {
+		const shown = description.credentials.filter((c) => c.displayOptions.show.resource.includes(value)).map((c) => c.name);
+		assert.deepEqual(shown, [value === 'telemetry' ? 'bdpIngressApi' : 'bdpOAuth2Api'], value);
+	}
 	assert.equal(description.credentials[0].name, 'bdpOAuth2Api');
 });
 
