@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-bdp-beta",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Beta version of the official EcoStruxure Building Data Platform nodes for n8n",
 	"license": "MIT",
 	"homepage": "https://github.com/fboucher/n8n-nodes-bdp#readme",
