@@ -2,7 +2,8 @@
 
 ## Requirements
 
-- Node.js 22 or later, matching the current n8n community-node runtime requirement.
+- Node.js 24 or later to install dependencies and run development, build, lint, test, and release commands. The CLI's `isolated-vm` dependency requires Node.js 24 or later.
+- The built community node's runtime requirement remains Node.js 22 or later, matching the current n8n community-node runtime requirement.
 - Self-hosted n8n with community nodes enabled. Packaging is checked against n8n **2.44.4**; older 1.x releases are not certified. Validate the exact n8n release used by your deployment before production use.
 - TypeScript and the `@n8n/node-cli` supplied by this repository.
 
