@@ -76,7 +76,7 @@ export const resourceProperty: INodeProperties = {
 	noDataExpression: true,
 	options: [
 		{ name: 'Building', value: 'building' },
-		{ name: 'Data Set', value: 'dataSet' },
+		{ name: 'Dataset', value: 'dataSet' },
 		{ name: 'Device', value: 'device' },
 		{ name: 'Device Group', value: 'deviceGroup' },
 		{ name: 'Event Hub', value: 'eventHub' },
@@ -87,6 +87,7 @@ export const resourceProperty: INodeProperties = {
 		{ name: 'Site', value: 'site' },
 		{ name: 'Source', value: 'source' },
 		{ name: 'Space', value: 'space' },
+		{ name: 'Telemetry', value: 'telemetry' },
 	],
 	default: 'building',
 };

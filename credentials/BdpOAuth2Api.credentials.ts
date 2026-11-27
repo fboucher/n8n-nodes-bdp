@@ -9,7 +9,7 @@ export class BdpOAuth2Api implements ICredentialType {
 
 	extends = ['oAuth2Api'];
 
-	documentationUrl = 'https://github.com/fboucher/n8n-nodes-bdp#credentials';
+	documentationUrl = 'https://exchange.se.com/devportal/?api=bdp-api-spec-v3-bundle&id=122362';
 
 	properties: INodeProperties[] = [
 		{

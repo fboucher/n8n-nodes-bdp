@@ -55,3 +55,29 @@ The package archive contains compiled node/credential code, theme assets, public
 Self-hosted lint configuration intentionally disables Cloud-only dependency restrictions, not parser validation or TypeScript strictness.
 
 Publication goes through `npm run release` and the tag-triggered GitHub Actions workflow after maintainer approval. The npm package name is a proposed identity; maintainers must approve the package owner and publishing configuration before the first release.
+
+## Write operations
+
+Phase four adds REST writes. They are deliberately fenced off from the read paths:
+
+- `requestBdp` is GET-only. Writes go through `requestBdpWrite` in `nodes/Bdp/shared/transport.ts`, which refuses any request that is not on the write allowlist, rejects paths outside `/api/`, and uses the same credential, base URL, `X-Api-Version: 3.0` header and safe error mapping as reads.
+- `nodes/Bdp/shared/writeAllowlist.ts` is the only place that grants write permission. Each entry names the resource, operation, HTTP method and exact path pattern, and whether repeating the request is harmless (`idempotent`).
+- `nodes/Bdp/shared/write.ts` holds the pure helpers: `buildReplacePatch` (JSON Patch limited to `replace`, with caller-supplied allowed paths and value validators), `requireUuid`, and `normalizeWriteResponse`.
+- The GraphQL resource keeps its own query-only entry point and is not affected.
+
+### Registering a new write operation
+
+1. Add an entry to `WRITE_ALLOWLIST` in `shared/writeAllowlist.ts`, using the narrowest path pattern. Only mark it `idempotent` for PATCH `replace`.
+2. Validate all input before calling `requestBdpWrite` (build patches with `buildReplacePatch`, check UUIDs and numbers). Validation must not need credentials or the network.
+3. Call `requestBdpWrite.call(context, { resource, operation, method, path, body, jsonPatch })`. Encode every path segment with `encodeURIComponent`.
+4. Handle the normalized result: `noContent` (204 or empty), `success` (body), or `partial` (206 with `items` and `itemErrors`). Never report a `partial` result as full success.
+5. Add the operation to `EXPECTED_WRITES` in `tests/write-allowlist.test.cjs`. That test enumerates every node operation and fails if anything unlisted sends a non-GET request, or if a read operation does.
+6. Update `docs/operations.md` and the README.
+
+### Retries
+
+Writes are **not retried** by default. A call may pass `retry: true`, and it is honoured only when the allowlist entry is `idempotent`. That is safe for PATCH `replace` (repeating it sets the same value) and never for POST create, on-demand set/run, or telemetry, where a retry after an ambiguous failure could repeat a physical action or duplicate data.
+
+### Errors
+
+Write failures use `safeWriteFailureMessage`: a message derived from the HTTP status only. Credentials, tokens and request bodies are never included in errors.

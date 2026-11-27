@@ -6,7 +6,10 @@ import { sourceResource } from '../source/properties';
 type Show = Record<string, string[]>;
 
 const listShow: Show = { resource: ['deviceGroup'], operation: ['getAll'] };
-const getShow: Show = { resource: ['deviceGroup'], operation: ['getById', 'getHistorical'] };
+const getShow: Show = {
+	resource: ['deviceGroup'],
+	operation: ['getById', 'getHistorical', 'setOnDemand', 'getOnDemand'],
+};
 
 const scopeOptions = [
 	{ name: 'In Building', value: 'building' },
@@ -76,11 +79,15 @@ export const deviceGroupOperation: INodeProperties = {
 	type: 'options',
 	noDataExpression: true,
 	displayOptions: { show: { resource: ['deviceGroup'] } },
+	// Read operations stay first so the existing List default is unchanged.
+	// eslint-disable-next-line n8n-nodes-base/node-param-options-type-unsorted-items
 	options: [
 		// eslint-disable-next-line n8n-nodes-base/node-param-option-name-wrong-for-get-many
 		{ name: 'List', value: 'getAll', action: 'Get many device groups' },
 		{ name: 'Get', value: 'getById', action: 'Get a device group' },
 		{ name: 'Historical Values', value: 'getHistorical', action: 'Get device group history' },
+		{ name: 'Get On Demand', value: 'getOnDemand', action: 'Read live values from the source system' },
+		{ name: 'Set On Demand', value: 'setOnDemand', action: 'Write values to the source system' },
 	],
 	default: 'getAll',
 };
@@ -146,5 +153,45 @@ export const deviceGroupPaginationProperties: INodeProperties[] = [
 		default: 100,
 		displayOptions: { show: { ...pageShow, returnAll: [false] } },
 		description: 'Max number of results to return',
+	},
+];
+
+const onDemandShow = { resource: ['deviceGroup'], operation: ['setOnDemand', 'getOnDemand'] };
+
+export const deviceGroupOnDemandProperties: INodeProperties[] = [
+	{
+		displayName:
+			'Set On Demand writes values straight to the real source system and can have physical effects. It is never retried automatically. Get On Demand reads live values and bypasses stored measurement values. Send one input item per point.',
+		name: 'onDemandWarning',
+		type: 'notice',
+		default: '',
+		displayOptions: { show: onDemandShow },
+	},
+	{
+		displayName: 'Point ID',
+		name: 'onDemandPointId',
+		type: 'string',
+		default: '',
+		displayOptions: { show: onDemandShow },
+		description:
+			'ID of the point for each input item; use an expression to read it from the item. Set exactly one of Point ID or Point Path.',
+	},
+	{
+		displayName: 'Point Path',
+		name: 'onDemandPointPath',
+		type: 'string',
+		default: '',
+		displayOptions: { show: onDemandShow },
+		description:
+			'Path of the point for each input item; use an expression to read it from the item. Set exactly one of Point ID or Point Path.',
+	},
+	{
+		displayName: 'Value',
+		name: 'onDemandValue',
+		type: 'string',
+		required: true,
+		default: '',
+		displayOptions: { show: { resource: ['deviceGroup'], operation: ['setOnDemand'] } },
+		description: 'The value to write for each input item, sent as text; use an expression to read it from the item',
 	},
 ];

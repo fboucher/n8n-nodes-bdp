@@ -51,7 +51,8 @@
 		"n8nNodesApiVersion": 1,
 		"strict": false,
 		"credentials": [
-			"dist/credentials/BdpOAuth2Api.credentials.js"
+			"dist/credentials/BdpOAuth2Api.credentials.js",
+			"dist/credentials/BdpIngressApi.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/Bdp/Bdp.node.js"
