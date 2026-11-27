@@ -62,7 +62,8 @@ Create a **BDP Community OAuth2 API** credential with the tenant ID, client ID, 
 ## Compatibility
 
 - Self-hosted n8n only, tested against n8n **2.44.4**. Not eligible for n8n Cloud because of the `graphql` runtime dependency.
-- Node.js 22 or later.
+- Runtime: Node.js 22 or later, matching the n8n community-node runtime requirement.
+- Development and build tooling: Node.js 24 or later.
 
 ## Usage
 
